@@ -1,0 +1,12 @@
+region: eu-west-2
+zone: eu-west-2a
+subnet_id: subnet-12345678
+security_group_ids:
+  - sg-0123456789abcdef0
+iam_instance_profile: roleWithAmazonSSMManagedInstanceCore
+amis:
+  - name: "Ubuntu 22.04"
+    id: "ami-09627c82937ccdd6d"
+instance_types:
+  - t2.micro
+  - t3.medium
