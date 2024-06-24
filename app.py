@@ -668,7 +668,7 @@ def handle_volume_resizing(
     Handles volume resizing.
     """
     try:
-        ec2_client.modify_volume(VolumeId=volume_id, Size=size)  # Size in GiB
+        ec2_client.modify_volume(VolumeId=volume_id, Size=size)
         client.chat_postMessage(
             channel=user_id,
             text="EBS volume resizing initiated.",
