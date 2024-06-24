@@ -11,3 +11,9 @@ amis:
 instance_types:
   - t2.micro
   - t3.medium
+volume_types:
+  - gp2
+  - io1
+  - io2
+iops:  # for io1 / io2
+  1000

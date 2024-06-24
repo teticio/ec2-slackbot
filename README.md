@@ -9,6 +9,7 @@ This repository contains a Slackbot that allows you to manage AWS EC2 instances 
 - Upload SSH public keys for EC2 instances.
 - Interact with the bot using Slack slash commands and modals.
 - Optionally mount SageMaker Studio EFS.
+- Create, attach, detach and destroy EBS volumes.
 
 ## Usage
 
@@ -17,6 +18,11 @@ The bot is designed to be used with Slack slash commands. The following commands
 - `/ec2 key`: Upload your public SSH key for EC2 instances.
 - `/ec2 up`: Launch an EC2 instance. This opens a modal where you can select the AMI, instance type, and other options.
 - `/ec2 down`: Terminate running EC2 instances. This opens a modal where you can select the instances to terminate.
+- `/ec2 create_volume`: Create a new EBS volume (limited to one per user).
+- `/ec2 resize_volume`: Resize an existing EBS volume.
+- `/ec2 attach_volume`: Attach an EBS volume to an EC2 instance. This opens a modal where you can select the volume and the instance.
+- `/ec2 detach_volume`: Detach an EBS volume from an EC2 instance. This opens a modal where you can select the volume and the instance.
+- `/ec2 destroy_volume`: Destroy an existing EBS volume. This opens a modal where you can select the volume to destroy.
 
 ## Configuration
 
@@ -118,3 +124,39 @@ In order to mount the EFS folder associated with the Slack user, you need to spe
         request_url: https://<your-url>/slack/events
     ...
     ```
+
+## Common Operations with EBS Volumes
+
+The EBS device will either be `/dev/xvdh` or `/dev/nvme1n1` depending on the type of the EC2 instance.
+
+```bash
+if [ -e /dev/xvdh ]; then
+    device=/dev/xvdh
+else
+    device=/dev/nvme1n1
+fi
+```
+
+To format the EBS volume:
+
+```bash
+sudo mkfs -t ext4 $device
+```
+
+To mount the EBS volume at `/mnt` and ensure it is mounted automatically after a reboot:
+
+```bash
+mount=/mnt
+mount $device $mount
+sudo chown $USER:$USER $mount
+echo "$device $mount ext4 defaults,nofail 0 2" >> /etc/fstab
+```
+
+To ensure the volume is mounted automatically after a reboot, add the following line to `/etc/fstab`:
+
+
+If you resize the EBS volume with `/ec2 resize_volume` then you will need to run
+
+```bash
+sudo resize2fs $device
+```
