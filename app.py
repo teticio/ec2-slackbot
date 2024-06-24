@@ -725,7 +725,7 @@ def handle_volume_detachment(user_name: str) -> Response:
             )
         return jsonify(
             response_type="ephemeral",
-            text="Volume detachment initiated",
+            text="Volume detachment initiated.",
         )
     except ec2_client.exceptions.ClientError as e:
         return jsonify(
