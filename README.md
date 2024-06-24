@@ -160,3 +160,5 @@ If you resize the EBS volume with `/ec2 resize_volume` then you will need to run
 ```bash
 sudo resize2fs $device
 ```
+
+The only EBS volumes that support multi-attach (i.e., can be attached to multiple instances simultaneously) are `io1` and `io2`. These volumes are compatible only with specific EC2 instance types. They incur charges based on both the storage size (Gb/month) and the provisioned IOPS (Input/Output Operations Per Second), which can be configured with `iops` in the `config.yaml`.

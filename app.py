@@ -647,6 +647,7 @@ def handle_volume_creation(
 
         if volume_type in ["io1", "io2"]:
             create_volume_params["Iops"] = config["iops"]
+            create_volume_params["MultiAttachEnabled"] = True
 
         ec2_client.create_volume(**create_volume_params)
         client.chat_postMessage(
