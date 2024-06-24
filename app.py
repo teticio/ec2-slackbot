@@ -4,6 +4,7 @@
 
 import json
 import os
+from typing import Dict, Any
 
 import boto3
 import yaml
@@ -23,27 +24,34 @@ ec2_client = boto3.client("ec2", region_name=config["region"])
 
 
 @app.before_request
-def verify_slack_signature():
-    if request.path.startswith("/slack/"):
-        if not verifier.is_valid_request(request.get_data(), request.headers):
-            abort(400, "Invalid Slack signature")
+def verify_slack_signature() -> None:
+    """
+    Verifies the slack signature before each request.
+    """
+    if request.path.startswith("/slack/") and not verifier.is_valid_request(
+        body=request.get_data(), headers=request.headers
+    ):
+        abort(response="Invalid Slack signature", status=400)
 
 
 @app.route("/slack/events", methods=["POST"])
-def slack_events():
+def slack_events() -> Response:
+    """
+    Handles slack events.
+    """
     if request.content_type == "application/json":
         data = request.json
     elif request.content_type == "application/x-www-form-urlencoded":
         data = request.form
     else:
-        return "Unsupported Media Type", 415
+        return Response(response="Unsupported Media Type", status=415)
 
     if "payload" in data:
         payload = json.loads(data["payload"])
         event_type = payload.get("type")
 
         if event_type == "view_submission":
-            handle_interactions(payload)
+            handle_interactions(payload=payload)
 
     if "challenge" in data:
         return jsonify({"challenge": data["challenge"]})
@@ -52,7 +60,10 @@ def slack_events():
 
 
 @app.route("/slack/commands", methods=["POST"])
-def handle_commands():
+def handle_commands() -> Response:
+    """
+    Handles slack commands.
+    """
     data = request.form
     command = data.get("command")
     sub_command = data.get("text")
@@ -61,37 +72,36 @@ def handle_commands():
 
     if command == "/ec2":
         if sub_command == "key":
-            return open_key_modal(trigger_id)
+            return open_key_modal(trigger_id=trigger_id)
 
         elif sub_command == "up":
             try:
                 ec2_client.describe_key_pairs(KeyNames=[user_name])
             except ec2_client.exceptions.ClientError:
-                return (
-                    jsonify(
-                        response_type="ephemeral",
-                        text="Please upload your public key first with /ec2 key.",
-                    ),
-                    200,
+                return jsonify(
+                    response_type="ephemeral",
+                    text="Please upload your public key first with /ec2 key.",
                 )
-            return open_instance_launch_modal(trigger_id)
+            return open_instance_launch_modal(trigger_id=trigger_id)
 
         elif sub_command == "down":
-            return open_instance_terminate_modal(trigger_id, user_name)
-
-        else:
-            return (
-                jsonify(
-                    response_type="ephemeral",
-                    text="Command must be one of: key, up, down.",
-                ),
-                200,
+            return open_instance_terminate_modal(
+                trigger_id=trigger_id, user_name=user_name
             )
 
-    return jsonify(response_type="ephemeral", text="Command not recognized."), 200
+        else:
+            return jsonify(
+                response_type="ephemeral",
+                text="Command must be one of: key, up, down.",
+            )
+
+    return jsonify(response_type="ephemeral", text="Command not recognized.")
 
 
-def open_key_modal(trigger_id):
+def open_key_modal(trigger_id: str) -> Response:
+    """
+    Opens the key modal.
+    """
     modal = {
         "type": "modal",
         "callback_id": "submit_key",
@@ -126,7 +136,10 @@ def open_key_modal(trigger_id):
     return Response(status=200)
 
 
-def open_instance_launch_modal(trigger_id):
+def open_instance_launch_modal(trigger_id: str) -> Response:
+    """
+    Opens the instance launch modal.
+    """
     ami_options = [
         {"text": {"type": "plain_text", "text": ami["name"]}, "value": ami["id"]}
         for ami in config["amis"]
@@ -210,7 +223,10 @@ def open_instance_launch_modal(trigger_id):
     return Response(status=200)
 
 
-def open_instance_terminate_modal(trigger_id, user_name):
+def open_instance_terminate_modal(trigger_id: str, user_name: str) -> Response:
+    """
+    Opens the instance termination modal.
+    """
     instances = ec2_client.describe_instances(
         Filters=[
             {"Name": "tag:User", "Values": [user_name]},
@@ -226,10 +242,7 @@ def open_instance_terminate_modal(trigger_id, user_name):
         for instance in reservation["Instances"]
     ]
     if len(instance_options) == 0:
-        return (
-            jsonify(response_type="ephemeral", text="No instances to terminate."),
-            200,
-        )
+        return jsonify(response_type="ephemeral", text="No instances to terminate.")
 
     modal = {
         "type": "modal",
@@ -258,7 +271,10 @@ def open_instance_terminate_modal(trigger_id, user_name):
     return Response(status=200)
 
 
-def handle_interactions(payload):
+def handle_interactions(payload: Dict[str, Any]) -> None:
+    """
+    Handles interactions.
+    """
     user_id = payload["user"]["id"]
     user_name = payload["user"]["username"]
     callback_id = payload.get("view", {}).get("callback_id")
@@ -266,7 +282,7 @@ def handle_interactions(payload):
 
     if callback_id == "submit_key":
         public_key = values["key_input"]["public_key"]["value"]
-        handle_key_submission(user_id, public_key)
+        handle_key_submission(user_id=user_id, public_key=public_key)
 
     elif callback_id == "launch_instance":
         ami_id = values["ami_choice"]["ami"]["selected_option"]["value"]
@@ -279,7 +295,12 @@ def handle_interactions(payload):
         )
         startup_script = values["startup_script"]["startup_script_input"]["value"]
         handle_instance_launch(
-            user_id, user_name, ami_id, instance_type, mount_efs, startup_script
+            user_id=user_id,
+            user_name=user_name,
+            ami_id=ami_id,
+            instance_type=instance_type,
+            mount_efs=mount_efs,
+            startup_script=startup_script,
         )
 
     elif callback_id == "terminate_instance":
@@ -289,10 +310,13 @@ def handle_interactions(payload):
                 "selected_options"
             ]
         ]
-        handle_instance_termination(user_id, selected_instances)
+        handle_instance_termination(user_id=user_id, instance_ids=selected_instances)
 
 
-def handle_key_submission(user_id, public_key):
+def handle_key_submission(user_id: str, public_key: str) -> None:
+    """
+    Handles key submission.
+    """
     try:
         ec2_client.delete_key_pair(KeyName=user_id)
     except ec2_client.exceptions.ClientError as e:
@@ -311,8 +335,16 @@ def handle_key_submission(user_id, public_key):
 
 
 def handle_instance_launch(
-    user_id, user_name, ami_id, instance_type, mount_efs, startup_script
-):
+    user_id: str,
+    user_name: str,
+    ami_id: str,
+    instance_type: str,
+    mount_efs: bool,
+    startup_script: str,
+) -> None:
+    """
+    Handles instance launch.
+    """
     try:
         instance = launch_ec2_instance(
             ec2_client=ec2_client,
@@ -337,7 +369,10 @@ def handle_instance_launch(
         )
 
 
-def handle_instance_termination(user_id, instance_ids):
+def handle_instance_termination(user_id: str, instance_ids: list) -> None:
+    """
+    Handles instance termination.
+    """
     try:
         ec2_client.terminate_instances(InstanceIds=instance_ids)
         terminated_instances = ", ".join(instance_ids)

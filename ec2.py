@@ -1,11 +1,12 @@
 from textwrap import dedent
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import boto3
+from botocore.client import BaseClient
 
 
 def launch_ec2_instance(
-    ec2_client: boto3.client,
+    ec2_client: Union[BaseClient, boto3.client],
     ami_id: str,
     iam_instance_profile: str,
     instance_type: str,
@@ -15,8 +16,24 @@ def launch_ec2_instance(
     efs_ip: Optional[str] = None,
     sms_user_name: Optional[str] = None,
     sms_domain_id: Optional[str] = None,
-    startup_script: str = None,
+    startup_script: Optional[str] = None,
 ) -> str:
+    """
+    Launches an EC2 instance with the given parameters.
+
+    :param ec2_client: The boto3 EC2 client.
+    :param ami_id: The ID of the Amazon Machine Image (AMI).
+    :param iam_instance_profile: The IAM instance profile.
+    :param instance_type: The type of instance.
+    :param key_name: The name of the key pair.
+    :param security_group_ids: The IDs of the security groups.
+    :param subnet_id: The ID of the subnet.
+    :param efs_ip: The IP address of the EFS (optional).
+    :param sms_user_name: The name of the SageMaker Studio user (optional).
+    :param sms_domain_id: The ID of the SageMaker Studio domain (optional).
+    :param startup_script: The startup script (optional).
+    :return: The ID of the launched instance.
+    """
     user_data_script = dedent(
         """\
         #!/bin/bash

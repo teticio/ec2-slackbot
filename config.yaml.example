@@ -1,6 +1,7 @@
 region: eu-west-2
-zone: eu-west-2a
 subnet_id: subnet-12345678
+efs_ip: 172.12.34.255
+sagemaker_studio_domain_id: d-abcdefghijkl
 security_group_ids:
   - sg-0123456789abcdef0
 iam_instance_profile: roleWithAmazonSSMManagedInstanceCore
