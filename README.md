@@ -8,8 +8,8 @@ This repository contains a Slackbot that allows you to manage AWS EC2 instances 
 - Terminate running EC2 instances.
 - Upload SSH public keys for EC2 instances.
 - Interact with the bot using Slack slash commands and modals.
-- Optionally mount SageMaker Studio EFS.
 - Create, attach, detach and destroy EBS volumes.
+- Optionally mount SageMaker Studio EFS or EBS volume.
 
 ## Usage
 
@@ -91,6 +91,12 @@ ssh ubuntu@i-...  # i-... is the instance id
 The "classic" version of SageMaker Studio mounts a shared EFS drive on all instances. One key advantage of using a regular EC2 instance is the ability to run `docker` directly, unlike SageMaker Studio apps which operate within a docker container.
 
 In order to mount the EFS folder associated with the Slack user, you need to specify the `efs_ip` of the EFS that corresponds to the `subnet`, and the `sagemaker_studio_domain_id` in the `config.yaml` file. Additionally, the `security_groups` should incorporate the one used by SageMaker Studio for NFS ingress.
+
+## Mount EBS
+
+Every Slack user can create an EBS volume with the `/ec2 create_volume` command, which they can mount at `/home`. If the EBS volume type is `io1` or `io2`, it can be attached to multiple EC2 instances simultaneously, although this imposes certain restrictions on the types of EC2 instances that can be used. EBS volumes are not networked, making them generally much faster.
+
+If you choose not to mount the EBS at `/home`, you can use it as an additional device. For more details, refer to the section "Common Operations with EBS Volumes".
 
 ## Deployment Steps
 

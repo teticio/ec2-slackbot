@@ -16,7 +16,9 @@ def launch_ec2_instance(
     efs_ip: Optional[str] = None,
     sms_user_name: Optional[str] = None,
     sms_domain_id: Optional[str] = None,
+    volume_id: Optional[str] = None,
     startup_script: Optional[str] = None,
+    mount_option: Optional[str] = None,
 ) -> str:
     """
     Launches an EC2 instance with the given parameters.
@@ -31,25 +33,36 @@ def launch_ec2_instance(
     :param efs_ip: The IP address of the EFS (optional).
     :param sms_user_name: The name of the SageMaker Studio user (optional).
     :param sms_domain_id: The ID of the SageMaker Studio domain (optional).
+    :param volume_id: The ID of the volume (optional).
     :param startup_script: The startup script (optional).
+    :param mount_option: The mount option ("efs" or "ebs") (optional).
     :return: The ID of the launched instance.
     """
     user_data_script = dedent(
         """\
         #!/bin/bash
-    """
+
+        USER=ubuntu
+        HOME=/home/$USER
+
+        # Install Docker engine
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+        sudo usermod -aG docker $USER
+        sudo systemctl enable docker
+        """
     )
 
-    if efs_ip is not None and sms_user_name is not None and sms_domain_id is not None:
+    if mount_option == "efs":
         user_id = boto3.client("sagemaker").describe_user_profile(
             DomainId=sms_domain_id, UserProfileName=sms_user_name
         )["HomeEfsFileSystemUid"]
 
         user_data_script += dedent(
             f"""\
-            USER=ubuntu
-            HOME=/home/$USER
-
             # Install NFS client
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common -y
@@ -64,19 +77,44 @@ def launch_ec2_instance(
             sudo mount $HOME
 
             # Merge the authorized_keys files
+            sudo mkdir -p $HOME/.ssh
             sudo touch $HOME/.ssh/authorized_keys
             sudo chmod 600 $HOME/.ssh/authorized_keys
             sudo cat /tmp/authorized_keys $HOME/.ssh/authorized_keys | sort | uniq | sudo tee $HOME/.ssh/authorized_keys
-            sudo chown ubuntu:users $HOME/.ssh/authorized_keys
+            sudo chown $USER:users $HOME/.ssh/authorized_keys
+            """
+        )
 
-            # Install Docker engine
-            sudo mkdir -p /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            sudo apt-get update
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
-            sudo usermod -aG docker $USER
-            sudo systemctl enable docker
+    elif mount_option == "ebs":
+        user_data_script += dedent(
+            """\
+            if [ -e /dev/xvdh ]; then
+                device=/dev/xvdh
+            else
+                device=/dev/nvme1n1
+            fi
+
+            # Format the EBS if necessary
+            if ! file -s $device | grep -q "filesystem"; then
+                sudo mkfs -t ext4 $device
+                sudo mount $device /mnt
+                sudo rsync -aXv /home/ /mnt/
+                sudo umount /mnt
+            fi
+
+            # Move the authorized_keys file out of the way
+            sudo mv $HOME/.ssh/authorized_keys /tmp/authorized_keys
+
+            # Mount the EBS
+            sudo mount $device /home
+            echo "$device /home ext4 defaults,nofail 0 2" >> /etc/fstab
+
+            # Merge the authorized_keys files
+            sudo mkdir -p $HOME/.ssh
+            sudo touch $HOME/.ssh/authorized_keys
+            sudo chmod 600 $HOME/.ssh/authorized_keys
+            sudo cat /tmp/authorized_keys $HOME/.ssh/authorized_keys | sort | uniq | sudo tee $HOME/.ssh/authorized_keys
+            sudo chown $USER:users $HOME/.ssh/authorized_keys
             """
         )
 
@@ -104,4 +142,14 @@ def launch_ec2_instance(
     )
 
     instance_id = response["Instances"][0]["InstanceId"]
+    waiter = ec2_client.get_waiter("instance_running")
+    waiter.wait(InstanceIds=[instance_id])
+
+    if mount_option == "ebs":
+        ec2_client.attach_volume(
+            Device="/dev/sdh",
+            InstanceId=instance_id,
+            VolumeId=volume_id,
+        )
+
     return instance_id

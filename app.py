@@ -1,8 +1,10 @@
 # TODO:
+# add waiters
 # warnings about long-running instances
 
 import json
 import os
+import threading
 from typing import Dict, Any
 
 import boto3
@@ -64,15 +66,18 @@ def handle_commands() -> Response:
     command = data.get("command")
     sub_command = data.get("text")
     trigger_id = data.get("trigger_id")
+    user_id = data.get("user_id")
     user_name = data.get("user_name")
 
     if command == "/ec2":
-        return handle_ec2_commands(sub_command, trigger_id, user_name)
+        return handle_ec2_commands(sub_command, trigger_id, user_id, user_name)
 
     return jsonify(response_type="ephemeral", text="Command not recognized.")
 
 
-def handle_ec2_commands(sub_command: str, trigger_id: str, user_name: str) -> Response:
+def handle_ec2_commands(
+    sub_command: str, trigger_id: str, user_id: str, user_name: str
+) -> Response:
     if sub_command == "key":
         return open_key_modal(trigger_id=trigger_id)
 
@@ -85,17 +90,52 @@ def handle_ec2_commands(sub_command: str, trigger_id: str, user_name: str) -> Re
     if sub_command == "create_volume":
         return open_create_volume_modal(trigger_id=trigger_id, user_name=user_name)
 
+    if "volume" in sub_command:
+        volumes = ec2_client.describe_volumes(
+            Filters=[
+                {"Name": "tag:User", "Values": [user_name]},
+            ]
+        )
+        if not volumes["Volumes"]:
+            return jsonify(
+                response_type="ephemeral",
+                text="No EBS volume found. Please /ec2 create_volume first.",
+            )
+        volume_id = volumes["Volumes"][0]["VolumeId"]
+
     if sub_command == "resize_volume":
         return open_resize_volume_modal(trigger_id=trigger_id, user_name=user_name)
 
     if sub_command == "attach_volume":
-        return open_attach_volume_modal(trigger_id=trigger_id, user_name=user_name)
+        return open_attach_volume_modal(
+            trigger_id=trigger_id, user_name=user_name, volume_id=volume_id
+        )
 
     if sub_command == "detach_volume":
-        return handle_volume_detachment(user_name=user_name)
+        threading.Thread(
+            target=handle_volume_detachment,
+            args=(
+                user_id,
+                user_name,
+            ),
+        ).start()
+        return jsonify(
+            response_type="ephemeral",
+            text="Detaching EBS volume...",
+        )
 
     if sub_command == "destroy_volume":
-        return handle_volume_destruction(user_name=user_name)
+        threading.Thread(
+            target=handle_volume_destruction,
+            args=(
+                user_id,
+                volume_id,
+            ),
+        ).start()
+        return jsonify(
+            response_type="ephemeral",
+            text="Destroying EBS volume...",
+        )
 
     return jsonify(
         response_type="ephemeral",
@@ -111,7 +151,7 @@ def handle_instance_up(trigger_id: str, user_name: str) -> Response:
             response_type="ephemeral",
             text="Please upload your public key first with /ec2 key.",
         )
-    return open_instance_launch_modal(trigger_id=trigger_id)
+    return open_instance_launch_modal(trigger_id=trigger_id, user_name=user_name)
 
 
 def get_request_data() -> Dict[str, Any]:
@@ -160,7 +200,7 @@ def open_key_modal(trigger_id: str) -> Response:
     return Response(status=200)
 
 
-def open_instance_launch_modal(trigger_id: str) -> Response:
+def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
     """
     Opens the instance launch modal.
     """
@@ -172,6 +212,47 @@ def open_instance_launch_modal(trigger_id: str) -> Response:
         {"text": {"type": "plain_text", "text": type}, "value": type}
         for type in config["instance_types"]
     ]
+
+    mount_options = [
+        {
+            "text": {
+                "type": "plain_text",
+                "text": "None",
+            },
+            "value": "none",
+        }
+    ]
+    try:
+        boto3.client("sagemaker").describe_user_profile(
+            DomainId=config["sagemaker_studio_domain_id"],
+            UserProfileName=user_name.replace(".", "-"),
+        )["HomeEfsFileSystemUid"]
+        mount_options.append(
+            {
+                "text": {
+                    "type": "plain_text",
+                    "text": "Mount SageMaker Studio EFS",
+                },
+                "value": "efs",
+            },
+        )
+    except boto3.client("sagemaker").exceptions.ResourceNotFound:
+        pass
+    if ec2_client.describe_volumes(
+        Filters=[
+            {"Name": "tag:User", "Values": [user_name]},
+        ]
+    )["Volumes"]:
+        mount_options.append(
+            {
+                "text": {
+                    "type": "plain_text",
+                    "text": "Mount EBS volume at /home",
+                },
+                "value": "ebs",
+            }
+        )
+
     modal = {
         "type": "modal",
         "callback_id": "launch_instance",
@@ -204,22 +285,18 @@ def open_instance_launch_modal(trigger_id: str) -> Response:
                 "label": {"type": "plain_text", "text": "Instance Type"},
             },
             {
-                "type": "section",
-                "block_id": "options",
-                "text": {"type": "mrkdwn", "text": "Options"},
-                "accessory": {
-                    "type": "checkboxes",
-                    "action_id": "efs_mount_check",
-                    "options": [
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Mount SageMaker Studio EFS",
-                            },
-                            "value": "mount_efs",
-                        }
-                    ],
+                "type": "input",
+                "block_id": "mount_options",
+                "element": {
+                    "type": "static_select",
+                    "action_id": "mount_input",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Select Mount Option",
+                    },
+                    "options": mount_options,
                 },
+                "label": {"type": "plain_text", "text": "Mount Options"},
             },
             {
                 "type": "input",
@@ -274,7 +351,7 @@ def open_instance_terminate_modal(trigger_id: str, user_name: str) -> Response:
     """
     instance_options = get_instance_options(user_name=user_name)
     if len(instance_options) == 0:
-        return jsonify(response_type="ephemeral", text="No instances to terminate.")
+        return jsonify(response_type="ephemeral", text="No EC2 instances to terminate.")
 
     modal = {
         "type": "modal",
@@ -421,21 +498,12 @@ def open_resize_volume_modal(trigger_id: str, user_name: str) -> Response:
     return Response(status=200)
 
 
-def open_attach_volume_modal(trigger_id: str, user_name: str) -> Response:
+def open_attach_volume_modal(
+    trigger_id: str, user_name: str, volume_id: str
+) -> Response:
     """
     Opens the volume attachment modal.
     """
-    volumes = ec2_client.describe_volumes(
-        Filters=[
-            {"Name": "tag:User", "Values": [user_name]},
-        ]
-    )
-    if not volumes["Volumes"]:
-        return jsonify(
-            response_type="ephemeral",
-            text="No EBS volume found. Please /ec2 create_volume first.",
-        )
-
     instance_options = get_instance_options(user_name=user_name)
     if len(instance_options) == 0:
         return jsonify(response_type="ephemeral", text="No instances to attach to.")
@@ -489,19 +557,21 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
         instance_type = values["instance_type_choice"]["instance_type"][
             "selected_option"
         ]["value"]
-        mount_efs = any(
-            option["value"] == "mount_efs"
-            for option in values["options"]["efs_mount_check"]["selected_options"]
-        )
+        mount_option = values["mount_options"]["mount_input"]["selected_option"][
+            "value"
+        ]
         startup_script = values["startup_script"]["startup_script_input"]["value"]
-        handle_instance_launch(
-            user_id=user_id,
-            user_name=user_name,
-            ami_id=ami_id,
-            instance_type=instance_type,
-            mount_efs=mount_efs,
-            startup_script=startup_script,
-        )
+        threading.Thread(
+            target=handle_instance_launch,
+            args=(
+                user_id,
+                user_name,
+                ami_id,
+                instance_type,
+                mount_option,
+                startup_script,
+            ),
+        ).start()
 
     elif callback_id == "terminate_instance":
         selected_instances = [
@@ -510,19 +580,25 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
                 "selected_options"
             ]
         ]
-        handle_instance_termination(user_id=user_id, instance_ids=selected_instances)
+        threading.Thread(
+            target=handle_instance_termination,
+            args=(user_id, selected_instances),
+        ).start()
 
     elif callback_id == "create_volume":
         volume_size = int(values["volume_size"]["volume_size_input"]["value"])
         volume_type = values["volume_type_choice"]["volume_type"]["selected_option"][
             "value"
         ]
-        handle_volume_creation(
-            user_id=user_id,
-            user_name=user_name,
-            size=volume_size,
-            volume_type=volume_type,
-        )
+        threading.Thread(
+            target=handle_volume_creation,
+            args=(
+                user_id,
+                user_name,
+                volume_size,
+                volume_type,
+            ),
+        ).start()
 
     elif callback_id == "resize_volume":
         volume_id = ec2_client.describe_volumes(
@@ -577,12 +653,18 @@ def handle_instance_launch(
     user_name: str,
     ami_id: str,
     instance_type: str,
-    mount_efs: bool,
+    mount_option: str,
     startup_script: str,
 ) -> None:
     """
     Handles instance launch.
     """
+    volumes = ec2_client.describe_volumes(
+        Filters=[
+            {"Name": "tag:User", "Values": [user_name]},
+        ]
+    )
+
     try:
         instance = launch_ec2_instance(
             ec2_client=ec2_client,
@@ -592,10 +674,12 @@ def handle_instance_launch(
             key_name=user_name,
             security_group_ids=config["security_group_ids"],
             subnet_id=config["subnet_id"],
-            efs_ip=config["efs_ip"] if mount_efs else None,
+            efs_ip=config["efs_ip"],
             sms_user_name=user_name.replace(".", "-"),
             sms_domain_id=config["sagemaker_studio_domain_id"],
+            volume_id=volumes["Volumes"][0]["VolumeId"] if volumes["Volumes"] else None,
             startup_script=startup_script,
+            mount_option=mount_option,
         )
         client.chat_postMessage(
             channel=user_id, text=f"EC2 instance {instance} launched successfully."
@@ -614,6 +698,10 @@ def handle_instance_termination(user_id: str, instance_ids: list) -> None:
     try:
         ec2_client.terminate_instances(InstanceIds=instance_ids)
         terminated_instances = ", ".join(instance_ids)
+
+        waiter = ec2_client.get_waiter("instance_terminated")
+        waiter.wait(InstanceIds=instance_ids)
+
         client.chat_postMessage(
             channel=user_id, text=f"Terminated instances: {terminated_instances}"
         )
@@ -649,7 +737,10 @@ def handle_volume_creation(
             create_volume_params["Iops"] = config["iops"]
             create_volume_params["MultiAttachEnabled"] = True
 
-        ec2_client.create_volume(**create_volume_params)
+        response = ec2_client.create_volume(**create_volume_params)
+        waiter = ec2_client.get_waiter("volume_available")
+        waiter.wait(VolumeIds=[response["VolumeId"]])
+
         client.chat_postMessage(
             channel=user_id, text="EBS volume created successfully."
         )
@@ -701,7 +792,7 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
         )
 
 
-def handle_volume_detachment(user_name: str) -> Response:
+def handle_volume_detachment(user_id: str, user_name: str) -> None:
     """
     Handles volume detachment.
     """
@@ -710,11 +801,6 @@ def handle_volume_detachment(user_name: str) -> Response:
             {"Name": "tag:User", "Values": [user_name]},
         ]
     )
-    if not volumes["Volumes"]:
-        return jsonify(
-            response_type="ephemeral",
-            text="No EBS volume found. Please /ec2 create_volume first.",
-        )
 
     try:
         for attachment in volumes["Volumes"][0].get("Attachments", []):
@@ -724,41 +810,37 @@ def handle_volume_detachment(user_name: str) -> Response:
                 Device=attachment["Device"],
                 Force=False,
             )
-        return jsonify(
-            response_type="ephemeral",
-            text="Volume detachment initiated.",
+
+        waiter = ec2_client.get_waiter("volume_available")
+        waiter.wait(VolumeIds=[volumes["Volumes"][0]["VolumeId"]])
+
+        client.chat_postMessage(
+            channel=user_id,
+            text="EBS volume available",
         )
     except ec2_client.exceptions.ClientError as e:
-        return jsonify(
-            response_type="ephemeral",
+        client.chat_postMessage(
+            channel=user_id,
             text=f"Error detaching EBS volume: {e.response['Error']['Message']}",
         )
 
 
-def handle_volume_destruction(user_name: str) -> Response:
+def handle_volume_destruction(user_id: str, volume_id: str) -> Response:
     """
     Handles volume destruction.
     """
-    volumes = ec2_client.describe_volumes(
-        Filters=[
-            {"Name": "tag:User", "Values": [user_name]},
-        ]
-    )
-    if not volumes["Volumes"]:
-        return jsonify(
-            response_type="ephemeral",
-            text="No EBS volume found. Please /ec2 create_volume first.",
-        )
-
     try:
-        ec2_client.delete_volume(VolumeId=volumes["Volumes"][0]["VolumeId"])
-        return jsonify(
-            response_type="ephemeral",
+        ec2_client.delete_volume(VolumeId=volume_id)
+        waiter = ec2_client.get_waiter("volume_deleted")
+        waiter.wait(VolumeIds=[volume_id])
+
+        client.chat_postMessage(
+            channel=user_id,
             text="EBS volume destroyed successfully.",
         )
     except ec2_client.exceptions.ClientError as e:
-        return jsonify(
-            response_type="ephemeral",
+        client.chat_postMessage(
+            channel=user_id,
             text=f"Error destroying EBS volume: {e.response['Error']['Message']}",
         )
 
