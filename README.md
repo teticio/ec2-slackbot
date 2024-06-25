@@ -76,6 +76,7 @@ For your local machine, you need to:
     # >>> AWS SSM config >>>
     Host i-* mi-*
         StrictHostKeyChecking accept-new
+        ForwardAgent yes
         ProxyCommand bash -c 'export PATH=$PATH:/usr/local/bin; aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters "portNumber=%p"'
     # <<< AWS SSM config <<<
     ```

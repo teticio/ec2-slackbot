@@ -109,7 +109,7 @@ def launch_ec2_instance(
             if ! grep -Fxq "$authorized_key" $HOME/.ssh/authorized_keys; then
                 echo "$authorized_key" >> $HOME/.ssh/authorized_keys
             fi
-            sudo chown $USER:users $HOME/.ssh/authorized_keys
+            sudo chown $USER:$USER $HOME/.ssh/authorized_keys
             """
         )
 
