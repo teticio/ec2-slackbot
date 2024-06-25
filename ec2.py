@@ -41,7 +41,6 @@ def launch_ec2_instance(
     user_data_script = dedent(
         """\
         #!/bin/bash
-
         USER=ubuntu
         HOME=/home/$USER
         """
@@ -168,5 +167,4 @@ def launch_ec2_instance(
 
     waiter = ec2_client.get_waiter("instance_status_ok")
     waiter.wait(InstanceIds=[instance_id])
-
     return instance_id
