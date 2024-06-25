@@ -45,6 +45,10 @@ def launch_ec2_instance(
         USER=ubuntu
         HOME=/home/$USER
 
+        # Install pip and build-essential
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip build-essential python3-dev unzip -y
+
         # Install Docker engine
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -67,8 +71,8 @@ def launch_ec2_instance(
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common -y
 
-            # Move the authorized_keys file out of the way
-            sudo mv $HOME/.ssh/authorized_keys /tmp/authorized_keys
+            # Save authorized_key
+            read -r authorized_key < $HOME/.ssh/authorized_keys
 
             # Mount the EFS file system
             sudo groupmod -g 1001 users
@@ -76,11 +80,13 @@ def launch_ec2_instance(
             echo "{efs_ip}:/{user_id} $HOME nfs nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
             sudo mount $HOME
 
-            # Merge the authorized_keys files
+            # Restore authorized_key
             sudo mkdir -p $HOME/.ssh
             sudo touch $HOME/.ssh/authorized_keys
             sudo chmod 600 $HOME/.ssh/authorized_keys
-            sudo cat /tmp/authorized_keys $HOME/.ssh/authorized_keys | sort | uniq | sudo tee $HOME/.ssh/authorized_keys
+            if ! grep -Fxq "$authorized_key" $HOME/.ssh/authorized_keys; then
+                echo "$authorized_key" >> $HOME/.ssh/authorized_keys
+            fi
             sudo chown $USER:users $HOME/.ssh/authorized_keys
             """
         )
@@ -102,18 +108,20 @@ def launch_ec2_instance(
                 sudo umount /mnt
             fi
 
-            # Move the authorized_keys file out of the way
-            sudo mv $HOME/.ssh/authorized_keys /tmp/authorized_keys
+            # Save authorized_key
+            read -r authorized_key < $HOME/.ssh/authorized_keys
 
             # Mount the EBS
             sudo mount $device /home
             echo "$device /home ext4 defaults,nofail 0 2" >> /etc/fstab
 
-            # Merge the authorized_keys files
+            # Restore authorized_key
             sudo mkdir -p $HOME/.ssh
             sudo touch $HOME/.ssh/authorized_keys
             sudo chmod 600 $HOME/.ssh/authorized_keys
-            sudo cat /tmp/authorized_keys $HOME/.ssh/authorized_keys | sort | uniq | sudo tee $HOME/.ssh/authorized_keys
+            if ! grep -Fxq "$authorized_key" $HOME/.ssh/authorized_keys; then
+                echo "$authorized_key" >> $HOME/.ssh/authorized_keys
+            fi
             sudo chown $USER:users $HOME/.ssh/authorized_keys
             """
         )
@@ -151,5 +159,7 @@ def launch_ec2_instance(
             InstanceId=instance_id,
             VolumeId=volume_id,
         )
+        waiter = ec2_client.get_waiter("volume_in_use")
+        waiter.wait(VolumeIds=[volume_id])
 
     return instance_id

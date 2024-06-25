@@ -94,9 +94,11 @@ In order to mount the EFS folder associated with the Slack user, you need to spe
 
 ## Mount EBS
 
-Every Slack user can create an EBS volume with the `/ec2 create_volume` command, which they can mount at `/home`. If the EBS volume type is `io1` or `io2`, it can be attached to multiple EC2 instances simultaneously, although this imposes certain restrictions on the types of EC2 instances that can be used. EBS volumes are not networked, making them generally much faster.
+Every Slack user can create an EBS volume with the `/ec2 create_volume` command, which they can mount at `/home`. During the initial setup, the volume will be formatted, and the `/home` directory will be configured. EBS volumes offer higher performance compared to EFS due to their non-networked nature, but they are typically limited to being attached to a single EC2 instance at a time.
 
 If you choose not to mount the EBS at `/home`, you can use it as an additional device. For more details, refer to the section "Common Operations with EBS Volumes".
+
+**Note:** EBS volumes of type `io1` and `io2` support multi-attach, but this requires a cluster setup.
 
 ## Deployment Steps
 
@@ -158,13 +160,8 @@ sudo chown $USER:$USER $mount
 echo "$device $mount ext4 defaults,nofail 0 2" >> /etc/fstab
 ```
 
-To ensure the volume is mounted automatically after a reboot, add the following line to `/etc/fstab`:
-
-
 If you resize the EBS volume with `/ec2 resize_volume` then you will need to run
 
 ```bash
 sudo resize2fs $device
 ```
-
-The only EBS volumes that support multi-attach (i.e., can be attached to multiple instances simultaneously) are `io1` and `io2`. These volumes are compatible only with specific EC2 instance types. They incur charges based on both the storage size (Gb/month) and the provisioned IOPS (Input/Output Operations Per Second), which can be configured with `iops` in the `config.yaml`.

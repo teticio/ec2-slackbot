@@ -1,5 +1,4 @@
 # TODO:
-# add waiters
 # warnings about long-running instances
 
 import json
@@ -33,6 +32,17 @@ def verify_slack_signature() -> None:
         body=request.get_data(), headers=request.headers
     ):
         abort(response="Invalid Slack signature", status=400)
+
+
+def get_request_data() -> Dict[str, Any]:
+    """
+    Retrieves the request data based on the content type.
+    """
+    if request.content_type == "application/json":
+        return request.json
+    if request.content_type == "application/x-www-form-urlencoded":
+        return request.form
+    return None
 
 
 @app.route("/slack/events", methods=["POST"])
@@ -78,6 +88,9 @@ def handle_commands() -> Response:
 def handle_ec2_commands(
     sub_command: str, trigger_id: str, user_id: str, user_name: str
 ) -> Response:
+    """
+    Handles EC2-related commands.
+    """
     if sub_command == "key":
         return open_key_modal(trigger_id=trigger_id)
 
@@ -125,6 +138,12 @@ def handle_ec2_commands(
         )
 
     if sub_command == "destroy_volume":
+        return jsonify(
+            response_type="ephemeral",
+            text="If you are sure you want to destroy the EBS volume, please type: /ec2 destroy_volume please.",
+        )
+
+    if sub_command == "destroy_volume please":
         threading.Thread(
             target=handle_volume_destruction,
             args=(
@@ -144,6 +163,9 @@ def handle_ec2_commands(
 
 
 def handle_instance_up(trigger_id: str, user_name: str) -> Response:
+    """
+    Handles the instance up command.
+    """
     try:
         ec2_client.describe_key_pairs(KeyNames=[user_name])
     except ec2_client.exceptions.ClientError:
@@ -152,14 +174,6 @@ def handle_instance_up(trigger_id: str, user_name: str) -> Response:
             text="Please upload your public key first with /ec2 key.",
         )
     return open_instance_launch_modal(trigger_id=trigger_id, user_name=user_name)
-
-
-def get_request_data() -> Dict[str, Any]:
-    if request.content_type == "application/json":
-        return request.json
-    if request.content_type == "application/x-www-form-urlencoded":
-        return request.form
-    return None
 
 
 def open_key_modal(trigger_id: str) -> Response:
@@ -325,6 +339,9 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
 
 
 def get_instance_options(user_name: str) -> list:
+    """
+    Retrieves instance options for a given user.
+    """
     instances = ec2_client.describe_instances(
         Filters=[
             {"Name": "tag:User", "Values": [user_name]},
@@ -395,11 +412,6 @@ def open_create_volume_modal(trigger_id: str, user_name: str) -> Response:
             text="EBS volume already exists, please /ec2 destroy_volume first.",
         )
 
-    volume_type_options = [
-        {"text": {"type": "plain_text", "text": volume_type}, "value": volume_type}
-        for volume_type in config["volume_types"]
-    ]
-
     modal = {
         "type": "modal",
         "callback_id": "create_volume",
@@ -419,27 +431,6 @@ def open_create_volume_modal(trigger_id: str, user_name: str) -> Response:
                     "initial_value": "20",
                 },
                 "label": {"type": "plain_text", "text": "Volume Size (GiB)"},
-            },
-            {
-                "type": "input",
-                "block_id": "volume_type_choice",
-                "element": {
-                    "type": "static_select",
-                    "action_id": "volume_type",
-                    "placeholder": {
-                        "type": "plain_text",
-                        "text": "Select Volume Type",
-                    },
-                    "options": volume_type_options,
-                    "initial_option": {
-                        "text": {
-                            "type": "plain_text",
-                            "text": config["volume_types"][0],
-                        },
-                        "value": config["volume_types"][0],
-                    },
-                },
-                "label": {"type": "plain_text", "text": "Volume Type"},
             },
         ],
     }
@@ -587,16 +578,12 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
 
     elif callback_id == "create_volume":
         volume_size = int(values["volume_size"]["volume_size_input"]["value"])
-        volume_type = values["volume_type_choice"]["volume_type"]["selected_option"][
-            "value"
-        ]
         threading.Thread(
             target=handle_volume_creation,
             args=(
                 user_id,
                 user_name,
                 volume_size,
-                volume_type,
             ),
         ).start()
 
@@ -698,10 +685,8 @@ def handle_instance_termination(user_id: str, instance_ids: list) -> None:
     try:
         ec2_client.terminate_instances(InstanceIds=instance_ids)
         terminated_instances = ", ".join(instance_ids)
-
         waiter = ec2_client.get_waiter("instance_terminated")
         waiter.wait(InstanceIds=instance_ids)
-
         client.chat_postMessage(
             channel=user_id, text=f"Terminated instances: {terminated_instances}"
         )
@@ -712,9 +697,7 @@ def handle_instance_termination(user_id: str, instance_ids: list) -> None:
         )
 
 
-def handle_volume_creation(
-    user_id: str, user_name: str, size: int, volume_type: str
-) -> None:
+def handle_volume_creation(user_id: str, user_name: str, size: int) -> None:
     """
     Handles volume creation.
     """
@@ -730,17 +713,11 @@ def handle_volume_creation(
                     ],
                 }
             ],
-            "VolumeType": volume_type,
+            "VolumeType": "gp2",
         }
-
-        if volume_type in ["io1", "io2"]:
-            create_volume_params["Iops"] = config["iops"]
-            create_volume_params["MultiAttachEnabled"] = True
-
         response = ec2_client.create_volume(**create_volume_params)
         waiter = ec2_client.get_waiter("volume_available")
         waiter.wait(VolumeIds=[response["VolumeId"]])
-
         client.chat_postMessage(
             channel=user_id, text="EBS volume created successfully."
         )
@@ -782,6 +759,8 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
             InstanceId=instance_id,
             VolumeId=volume_id,
         )
+        waiter = ec2_client.get_waiter("volume_in_use")
+        waiter.wait(VolumeIds=[volume_id])
         client.chat_postMessage(
             channel=user_id, text="EBS volume attached successfully."
         )
@@ -792,7 +771,7 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
         )
 
 
-def handle_volume_detachment(user_id: str, user_name: str) -> None:
+def handle_sdetachment(user_id: str, user_name: str) -> None:
     """
     Handles volume detachment.
     """
@@ -810,10 +789,8 @@ def handle_volume_detachment(user_id: str, user_name: str) -> None:
                 Device=attachment["Device"],
                 Force=False,
             )
-
         waiter = ec2_client.get_waiter("volume_available")
         waiter.wait(VolumeIds=[volumes["Volumes"][0]["VolumeId"]])
-
         client.chat_postMessage(
             channel=user_id,
             text="EBS volume available",
@@ -833,7 +810,6 @@ def handle_volume_destruction(user_id: str, volume_id: str) -> Response:
         ec2_client.delete_volume(VolumeId=volume_id)
         waiter = ec2_client.get_waiter("volume_deleted")
         waiter.wait(VolumeIds=[volume_id])
-
         client.chat_postMessage(
             channel=user_id,
             text="EBS volume destroyed successfully.",
