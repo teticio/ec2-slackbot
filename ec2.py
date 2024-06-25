@@ -44,19 +44,6 @@ def launch_ec2_instance(
 
         USER=ubuntu
         HOME=/home/$USER
-
-        # Install pip and build-essential
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip build-essential python3-dev unzip -y
-
-        # Install Docker engine
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
-        sudo usermod -aG docker $USER
-        sudo systemctl enable docker
         """
     )
 
@@ -126,6 +113,23 @@ def launch_ec2_instance(
             """
         )
 
+    user_data_script += dedent(
+        """
+        # Install pip, build-essential, python3-dev and unzip
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip build-essential python3-dev unzip -y
+
+        # Install Docker engine
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+        sudo usermod -aG docker $USER
+        sudo systemctl enable docker
+        """
+    )
+
     if startup_script is not None:
         user_data_script += startup_script
 
@@ -161,5 +165,8 @@ def launch_ec2_instance(
         )
         waiter = ec2_client.get_waiter("volume_in_use")
         waiter.wait(VolumeIds=[volume_id])
+
+    waiter = ec2_client.get_waiter("instance_status_ok")
+    waiter.wait(InstanceIds=[instance_id])
 
     return instance_id
