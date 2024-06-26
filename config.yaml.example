@@ -1,9 +1,9 @@
 region: eu-west-2                          # AWS region
 subnet_id: subnet-12345678                 # Subnet ID for the instances
-efs_ip: 172.12.34.255                      # IP address for the EFS
+efs_ip: 172.12.34.255                      # IP address for the EFS in subnet
 sagemaker_studio_domain_id: d-abcdefghijkl # SageMaker Studio domain ID
 security_group_ids:
-  - sg-0123456789abcdef0                   # Security group ID
+  - sg-0123456789abcdef0                   # Security group ID (include SageMaker Studio NFS ingress)
 iam_instance_profile: roleWithAmazonSSMManagedInstanceCore # IAM instance profile
 amis:
   - name: "Ubuntu 22.04"                   # AMI name
