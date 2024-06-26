@@ -733,7 +733,7 @@ def handle_volume_creation(user_id: str, user_name: str, size: int) -> None:
         waiter = ec2_client.get_waiter("volume_available")
         waiter.wait(VolumeIds=[response["VolumeId"]])
         client.chat_postMessage(
-            channel=user_id, text="EBS volume created successfully."
+            channel=user_id, text=f"EBS volume of {size} GiB created successfully."
         )
     except ec2_client.exceptions.ClientError as e:
         client.chat_postMessage(
@@ -752,9 +752,11 @@ def handle_volume_resizing(
     """
     try:
         ec2_client.modify_volume(VolumeId=volume_id, Size=size)
+        waiter = ec2_client.get_waiter("volume_available")
+        waiter.wait(VolumeIds=[volume_id])
         client.chat_postMessage(
             channel=user_id,
-            text="EBS volume resizing initiated.",
+            text=f"EBS volume resized to {size} GiB successfully. Remember to run resize2fs to resize the filesystem.",
         )
     except ec2_client.exceptions.ClientError as e:
         client.chat_postMessage(
@@ -807,7 +809,7 @@ def handle_detachment(user_id: str, user_name: str) -> None:
         waiter.wait(VolumeIds=[volumes["Volumes"][0]["VolumeId"]])
         client.chat_postMessage(
             channel=user_id,
-            text="EBS volume available",
+            text="EBS volume detached successfuly.",
         )
     except ec2_client.exceptions.ClientError as e:
         client.chat_postMessage(
