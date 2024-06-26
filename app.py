@@ -4,7 +4,7 @@
 import json
 import os
 import threading
-from typing import Dict, Any
+from typing import Any, Dict
 
 import boto3
 import yaml
@@ -223,8 +223,14 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
         for ami in config["amis"]
     ]
     instance_type_options = [
-        {"text": {"type": "plain_text", "text": type}, "value": type}
-        for type in config["instance_types"]
+        {
+            "text": {
+                "type": "plain_text",
+                "text": f"{list(instance.keys())[0]} (${list(instance.values())[0]}/hr)",
+            },
+            "value": list(instance.keys())[0],
+        }
+        for instance in config["instance_types"]
     ]
 
     mount_options = [
@@ -430,7 +436,10 @@ def open_create_volume_modal(trigger_id: str, user_name: str) -> Response:
                     },
                     "initial_value": "20",
                 },
-                "label": {"type": "plain_text", "text": "Volume Size (GiB)"},
+                "label": {
+                    "type": "plain_text",
+                    "text": f"Volume Size in GiB (max {config['max_volume_size']})",
+                },
             },
         ],
     }
@@ -476,7 +485,10 @@ def open_resize_volume_modal(trigger_id: str, user_name: str) -> Response:
                     },
                     "initial_value": str(volumes["Volumes"][0]["Size"]),
                 },
-                "label": {"type": "plain_text", "text": "Volume Size (GiB)"},
+                "label": {
+                    "type": "plain_text",
+                    "text": f"Volume Size in GiB (max {config['max_volume_size']})",
+                },
             },
         ],
     }
@@ -578,6 +590,7 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
 
     elif callback_id == "create_volume":
         volume_size = int(values["volume_size"]["volume_size_input"]["value"])
+        volume_size = min(volume_size, config["max_volume_size"])
         threading.Thread(
             target=handle_volume_creation,
             args=(
@@ -594,6 +607,7 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
             ]
         )["Volumes"][0]["VolumeId"]
         volume_size = int(values["volume_size"]["volume_size_input"]["value"])
+        volume_size = min(volume_size, config["max_volume_size"])
         handle_volume_resizing(
             user_id=user_id,
             volume_id=volume_id,
@@ -771,7 +785,7 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
         )
 
 
-def handle_sdetachment(user_id: str, user_name: str) -> None:
+def handle_detachment(user_id: str, user_name: str) -> None:
     """
     Handles volume detachment.
     """

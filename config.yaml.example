@@ -9,5 +9,6 @@ amis:
   - name: "Ubuntu 22.04"
     id: "ami-09627c82937ccdd6d"
 instance_types:
-  - t2.micro
-  - t3.medium
+  - t2.micro: 0.0116
+  - t3.medium: 0.418
+max_volume_size: 100
