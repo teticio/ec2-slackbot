@@ -1,15 +1,15 @@
 # Slackbot for AWS EC2 Management
 
-This repository contains a Slackbot that allows you to manage AWS EC2 instances directly from Slack. The bot is built with Python, using Flask for the web server and the slack-sdk for interacting with the Slack API.
+This repository contains a Slackbot that allows you to manage AWS EC2 instances directly from Slack. The bot is built with Python, using Flask for the web server and the `slack-sdk` for interacting with the Slack API.
 
 ## Features
 
 - Launch EC2 instances with specified parameters.
 - Terminate running EC2 instances.
 - Upload SSH public keys for EC2 instances.
-- Interact with the bot using Slack slash commands and modals.
 - Create, attach, detach and destroy EBS volumes.
 - Optionally mount SageMaker Studio EFS or EBS volume.
+- Warn users to consider terminating long-running EC2 instances.
 
 ## Usage
 
@@ -28,14 +28,14 @@ The bot is designed to be used with Slack slash commands. The following commands
 
 The bot's configuration is stored in a `config.yaml` file. An example configuration is provided in `config.yaml.example`. The configuration includes AWS region, subnet and security group details, as well as AMI and instance type options.
 
-## SSM
+## SSM (Simple Systems Manager)
 
 The instances establish a connection using SSH over SSM.
 
 For AWS, you need to perform the following steps:
 
 1. Create a role and attach the `AmazonSSMManagedInstanceCore` policy to it. Then, set the `iam_instance_profile` in `config.yaml` to the name of this profile.
-2. If your `subnet` is private, you will need to [configure your VPC endpoints](https://repost.aws/knowledge-center/ec2-systems-manager-vpc-endpoints).
+2. If your `subnet` is private, you will need to [configure your VPC endpoints](https://repost.aws/knowledge-center/ec2-systems-manager-vpc-endpoints) to allow SSM connections.
 3. Make sure your AWS account is set to have an "advanced activation tier":
 
     ```bash

@@ -1,9 +1,8 @@
-# TODO:
-# warnings about long-running instances
-
 import json
 import os
 import threading
+import time
+from datetime import datetime
 from typing import Any, Dict
 
 import boto3
@@ -226,13 +225,12 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
         {
             "text": {
                 "type": "plain_text",
-                "text": f"{list(instance.keys())[0]} (${list(instance.values())[0]}/hr)",
+                "text": f"{instance_type} (${cost}/hr)",
             },
-            "value": list(instance.keys())[0],
+            "value": instance_type,
         }
-        for instance in config["instance_types"]
+        for instance_type, cost in config["instance_types"].items()
     ]
-
     mount_options = [
         {
             "text": {
@@ -315,6 +313,13 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
                         "text": "Select Mount Option",
                     },
                     "options": mount_options,
+                    "initial_option": {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "None",
+                        },
+                        "value": "none",
+                    },
                 },
                 "label": {"type": "plain_text", "text": "Mount Options"},
             },
@@ -837,5 +842,78 @@ def handle_volume_destruction(user_id: str, volume_id: str) -> Response:
         )
 
 
+def get_all_user_ids() -> Dict[str, str]:
+    """
+    Retrieves a dictionary of user IDs with the key based on user names in the Slack workspace.
+    """
+    try:
+        response = client.users_list()
+        if response["ok"]:
+            return {
+                user["name"]: user["id"]
+                for user in response["members"]
+                if not user["is_bot"] and not user["deleted"]
+            }
+        else:
+            print(f"Error fetching users: {response['error']}")
+            return {}
+    except SlackApiError as e:
+        print(f"Error fetching users: {e.response['error']}")
+        return {}
+
+
+def periodically_check_instances() -> None:
+    """
+    Periodically checks for long-running instances and sends warnings.
+    """
+    user_ids = get_all_user_ids()
+    instances = ec2_client.describe_instances(
+        Filters=[
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+
+    for reservation in instances["Reservations"]:
+        for instance in reservation["Instances"]:
+            launch_time = instance["LaunchTime"]
+            instance_id = instance["InstanceId"]
+            instance_type = instance["InstanceType"]
+            instance_cost = config["instance_types"].get(
+                instance_type, config["large_instance_cost_threshold"]
+            )
+            user_name = next(
+                (
+                    tag["Value"]
+                    for tag in instance.get("Tags", [])
+                    if tag["Key"] == "User"
+                ),
+                None,
+            )
+            if user_name in user_ids:
+                running_days = (datetime.now(launch_time.tzinfo) - launch_time).days
+                if running_days >= config["instance_warning_days"] or (
+                    instance_cost >= config["large_instance_cost_threshold"]
+                    and running_days >= config["large_instance_warning_days"]
+                ):
+                    client.chat_postMessage(
+                        channel=user_ids[user_name],
+                        text=f"Warning: Your instance {instance_id} ({instance_type}) has been running for {running_days} days. Please consider terminating it with /ec2 down.",
+                    )
+
+
+def start_periodic_checks(interval: int) -> None:
+    """
+    Starts periodic checks for long-running instances.
+    """
+
+    def run_checks():
+        while True:
+            periodically_check_instances()
+            time.sleep(interval)
+
+    threading.Thread(target=run_checks, daemon=True).start()
+
+
 if __name__ == "__main__":
+    start_periodic_checks(config["check_interval_seconds"])
     app.run(port=3000)

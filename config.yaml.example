@@ -1,14 +1,18 @@
-region: eu-west-2
-subnet_id: subnet-12345678
-efs_ip: 172.12.34.255
-sagemaker_studio_domain_id: d-abcdefghijkl
+region: eu-west-2                          # AWS region
+subnet_id: subnet-12345678                 # Subnet ID for the instances
+efs_ip: 172.12.34.255                      # IP address for the EFS
+sagemaker_studio_domain_id: d-abcdefghijkl # SageMaker Studio domain ID
 security_group_ids:
-  - sg-0123456789abcdef0
-iam_instance_profile: roleWithAmazonSSMManagedInstanceCore
+  - sg-0123456789abcdef0                   # Security group ID
+iam_instance_profile: roleWithAmazonSSMManagedInstanceCore # IAM instance profile
 amis:
-  - name: "Ubuntu 22.04"
-    id: "ami-09627c82937ccdd6d"
+  - name: "Ubuntu 22.04"                   # AMI name
+    id: "ami-09627c82937ccdd6d"            # AMI ID
 instance_types:
-  - t2.micro: 0.0116
-  - t3.medium: 0.418
+  t2.micro: 0.0116                         # Instance type and cost per hour
+  t3.medium: 0.0418                        # Instance type and cost per hour
+check_interval_seconds: 86400              # Interval for periodic checks in seconds
+instance_warning_days: 7                   # Days before warning about long-running instances
+large_instance_cost_threshold: 0.5         # Cost threshold for large instances
+large_instance_warning_days: 1             # Days before warning about large instance costs
 max_volume_size: 100
