@@ -120,7 +120,7 @@ def handle_ec2_commands(
 
     if sub_command == "attach_volume":
         return open_attach_volume_modal(
-            trigger_id=trigger_id, user_name=user_name, volume_id=volume_id
+            trigger_id=trigger_id, user_name=user_name,
         )
 
     if sub_command == "detach_volume":
@@ -218,8 +218,8 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
     Opens the instance launch modal.
     """
     ami_options = [
-        {"text": {"type": "plain_text", "text": ami["name"]}, "value": ami["id"]}
-        for ami in config["amis"]
+        {"text": {"type": "plain_text", "text": ami_data["name"]}, "value": ami_id}
+        for ami_id, ami_data in config["amis"].items()
     ]
     instance_type_options = [
         {
@@ -507,7 +507,7 @@ def open_resize_volume_modal(trigger_id: str, user_name: str) -> Response:
 
 
 def open_attach_volume_modal(
-    trigger_id: str, user_name: str, volume_id: str
+    trigger_id: str, user_name: str,
 ) -> Response:
     """
     Opens the volume attachment modal.
@@ -562,6 +562,7 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
 
     elif callback_id == "launch_instance":
         ami_id = values["ami_choice"]["ami"]["selected_option"]["value"]
+        ami_startup_script = config["amis"][ami_id]["startup_script"]
         instance_type = values["instance_type_choice"]["instance_type"][
             "selected_option"
         ]["value"]
@@ -578,6 +579,7 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
                 instance_type,
                 mount_option,
                 startup_script,
+                ami_startup_script,
             ),
         ).start()
 
@@ -661,6 +663,7 @@ def handle_instance_launch(
     instance_type: str,
     mount_option: str,
     startup_script: str,
+    ami_startup_script: str,
 ) -> None:
     """
     Handles instance launch.
@@ -684,7 +687,7 @@ def handle_instance_launch(
             sms_user_name=user_name.replace(".", "-"),
             sms_domain_id=config["sagemaker_studio_domain_id"],
             volume_id=volumes["Volumes"][0]["VolumeId"] if volumes["Volumes"] else None,
-            startup_script=startup_script,
+            startup_script=ami_startup_script + startup_script,
             mount_option=mount_option,
         )
         client.chat_postMessage(
@@ -792,7 +795,7 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
         )
 
 
-def handle_detachment(user_id: str, user_name: str) -> None:
+def handle_volume_detachment(user_id: str, user_name: str) -> None:
     """
     Handles volume detachment.
     """

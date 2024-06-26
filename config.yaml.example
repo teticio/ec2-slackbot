@@ -5,9 +5,6 @@ sagemaker_studio_domain_id: d-abcdefghijkl # SageMaker Studio domain ID
 security_group_ids:
   - sg-0123456789abcdef0                   # Security group ID (include SageMaker Studio NFS ingress)
 iam_instance_profile: roleWithAmazonSSMManagedInstanceCore # IAM instance profile
-amis:
-  - name: "Ubuntu 22.04"                   # AMI name
-    id: "ami-09627c82937ccdd6d"            # AMI ID
 instance_types:
   t2.micro: 0.0116                         # Instance type and cost per hour
   t3.medium: 0.0418                        # Instance type and cost per hour
@@ -15,4 +12,20 @@ check_interval_seconds: 43200              # Interval for periodic checks in sec
 instance_warning_days: 7                   # Days before warning about long-running instances
 large_instance_cost_threshold: 0.5         # Cost threshold for large instances
 large_instance_warning_days: 1             # Days before warning about large instance costs
-max_volume_size: 100                       # Max EBS volume size
+max_volume_size: 100                       # Max EBS volume size in GiB
+amis:
+  ami-09627c82937ccdd6d:                   # AMI ID
+    name: "Ubuntu 22.04"                   # AMI name
+    startup_script: |                      # Startup script for the instance
+      # Install pip, build-essential, python3-dev and unzip
+      sudo apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip build-essential python3-dev unzip -y
+
+      # Install Docker engine
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      sudo apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+      sudo usermod -aG docker $USER
+      sudo systemctl enable docker

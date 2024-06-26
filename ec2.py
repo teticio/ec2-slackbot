@@ -41,6 +41,7 @@ def launch_ec2_instance(
     user_data_script = dedent(
         """\
         #!/bin/bash
+
         USER=ubuntu
         HOME=/home/$USER
         """
@@ -111,23 +112,6 @@ def launch_ec2_instance(
             sudo chown $USER:$USER $HOME/.ssh/authorized_keys
             """
         )
-
-    user_data_script += dedent(
-        """
-        # Install pip, build-essential, python3-dev and unzip
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip build-essential python3-dev unzip -y
-
-        # Install Docker engine
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
-        sudo usermod -aG docker $USER
-        sudo systemctl enable docker
-        """
-    )
 
     if startup_script is not None:
         user_data_script += startup_script
