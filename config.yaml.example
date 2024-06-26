@@ -15,4 +15,4 @@ check_interval_seconds: 86400              # Interval for periodic checks in sec
 instance_warning_days: 7                   # Days before warning about long-running instances
 large_instance_cost_threshold: 0.5         # Cost threshold for large instances
 large_instance_warning_days: 1             # Days before warning about large instance costs
-max_volume_size: 100
+max_volume_size: 100                       # Max EBS volume size
