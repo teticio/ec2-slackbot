@@ -11,7 +11,7 @@ amis:
 instance_types:
   t2.micro: 0.0116                         # Instance type and cost per hour
   t3.medium: 0.0418                        # Instance type and cost per hour
-check_interval_seconds: 86400              # Interval for periodic checks in seconds
+check_interval_seconds: 43200              # Interval for periodic checks in seconds
 instance_warning_days: 7                   # Days before warning about long-running instances
 large_instance_cost_threshold: 0.5         # Cost threshold for large instances
 large_instance_warning_days: 1             # Days before warning about large instance costs
