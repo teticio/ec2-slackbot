@@ -120,7 +120,8 @@ def handle_ec2_commands(
 
     if sub_command == "attach_volume":
         return open_attach_volume_modal(
-            trigger_id=trigger_id, user_name=user_name,
+            trigger_id=trigger_id,
+            user_name=user_name,
         )
 
     if sub_command == "detach_volume":
@@ -507,7 +508,8 @@ def open_resize_volume_modal(trigger_id: str, user_name: str) -> Response:
 
 
 def open_attach_volume_modal(
-    trigger_id: str, user_name: str,
+    trigger_id: str,
+    user_name: str,
 ) -> Response:
     """
     Opens the volume attachment modal.
