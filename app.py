@@ -218,8 +218,8 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
     Opens the instance launch modal.
     """
     ami_options = [
-        {"text": {"type": "plain_text", "text": ami_data["name"]}, "value": ami_id}
-        for ami_id, ami_data in config["amis"].items()
+        {"text": {"type": "plain_text", "text": ami}, "value": ami}
+        for ami in config["amis"]
     ]
     instance_type_options = [
         {
@@ -561,8 +561,7 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
         handle_key_submission(user_id=user_id, public_key=public_key)
 
     elif callback_id == "launch_instance":
-        ami_id = values["ami_choice"]["ami"]["selected_option"]["value"]
-        ami_startup_script = config["amis"][ami_id]["startup_script"]
+        ami = config["amis"][values["ami_choice"]["ami"]["selected_option"]["value"]]
         instance_type = values["instance_type_choice"]["instance_type"][
             "selected_option"
         ]["value"]
@@ -575,11 +574,11 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
             args=(
                 user_id,
                 user_name,
-                ami_id,
+                ami["id"],
                 instance_type,
                 mount_option,
-                startup_script,
-                ami_startup_script,
+                startup_script or "",
+                ami["startup_script"],
             ),
         ).start()
 
