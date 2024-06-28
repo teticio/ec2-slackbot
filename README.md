@@ -18,11 +18,14 @@ The bot is designed to be used with Slack slash commands. The following commands
 - `/ec2 key`: Upload your public SSH key for EC2 instances.
 - `/ec2 up`: Launch an EC2 instance. This opens a modal where you can select the AMI, instance type, and other options.
 - `/ec2 down`: Terminate running EC2 instances. This opens a modal where you can select the instances to terminate.
-- `/ec2 create_volume`: Create a new EBS volume (limited to one per user).
-- `/ec2 resize_volume`: Resize an existing EBS volume.
-- `/ec2 attach_volume`: Attach an EBS volume to an EC2 instance. This opens a modal where you can select the volume and the instance.
-- `/ec2 detach_volume`: Detach an EBS volume from an EC2 instance. This opens a modal where you can select the volume and the instance.
-- `/ec2 destroy_volume`: Destroy an existing EBS volume. This opens a modal where you can select the volume to destroy.
+- `/ec2 change`: Modify the configuration of a running EC2 instance. This opens a modal where you can select the instance and the new configuration options.
+- `/ec2 start`: Start a stopped EC2 instance. This opens a modal where you can select the instance to start.
+- `/ec2 stop`: Stop a running EC2 instance. This opens a modal where you can select the instance to stop.
+- `/ebs create`: Create a new EBS volume (limited to one per user).
+- `/ebs resize`: Resize an existing EBS volume.
+- `/ebs attach`: Attach an EBS volume to an EC2 instance. This opens a modal where you can select the volume and the instance.
+- `/ebs detach`: Detach an EBS volume from an EC2 instance. This opens a modal where you can select the volume and the instance.
+- `/ebs destroy please`: Destroy an existing EBS volume. This opens a modal where you can select the volume to destroy.
 
 ## Configuration
 
@@ -119,6 +122,12 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
         - command: /ec2
           url: https://<your-url>/slack/commands
           description: EC2
+          usage_hint: up | down | change | start | stop
+          should_escape: false
+        - command: /ebs
+          url: https://<your-url>/slack/commands
+          description: EBS
+          usage_hint: create | resize | attach | detach | destroy
           should_escape: false
     oauth_config:
       scopes:
@@ -149,16 +158,13 @@ fi
 To format the EBS volume:
 
 ```bash
-sudo mkfs -t ext4 $device
+sudo mkfs -L ebs_volume -t ext4 $device
 ```
 
 To mount the EBS volume at `/mnt` and ensure it is mounted automatically after a reboot:
 
 ```bash
-mount=/mnt
-mount $device $mount
-sudo chown $USER:$USER $mount
-echo "$device $mount ext4 defaults,nofail 0 2" >> /etc/fstab
+echo "LABEL=ebs_volume /mnt ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
 ```
 
 If you resize the EBS volume with `/ec2 resize_volume` then you will need to run

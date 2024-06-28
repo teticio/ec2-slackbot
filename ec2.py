@@ -89,7 +89,7 @@ def launch_ec2_instance(
 
             # Format the EBS if necessary
             if ! file -s $device | grep -q "filesystem"; then
-                sudo mkfs -t ext4 $device
+                sudo mkfs -L ebs_volume -t ext4 $device
                 sudo mount $device /mnt
                 sudo rsync -aXv /home/ /mnt/
                 sudo umount /mnt
@@ -100,7 +100,7 @@ def launch_ec2_instance(
 
             # Mount the EBS
             sudo mount $device /home
-            echo "$device /home ext4 defaults,nofail 0 2" >> /etc/fstab
+            echo "LABEL=ebs_volume /home ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
 
             # Restore authorized_key
             sudo mkdir -p $HOME/.ssh

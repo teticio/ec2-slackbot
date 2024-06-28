@@ -30,7 +30,7 @@ def verify_slack_signature() -> None:
     if request.path.startswith("/slack/") and not verifier.is_valid_request(
         body=request.get_data(), headers=request.headers
     ):
-        abort(response="Invalid Slack signature", status=400)
+        abort(code=Response(response="Invalid Slack signature", status=400))
 
 
 def get_request_data() -> Dict[str, Any]:
@@ -81,6 +81,9 @@ def handle_commands() -> Response:
     if command == "/ec2":
         return handle_ec2_commands(sub_command, trigger_id, user_id, user_name)
 
+    if command == "/ebs":
+        return handle_ebs_commands(sub_command, trigger_id, user_id, user_name)
+
     return jsonify(response_type="ephemeral", text="Command not recognized.")
 
 
@@ -96,35 +99,53 @@ def handle_ec2_commands(
     if sub_command == "up":
         return handle_instance_up(trigger_id, user_name)
 
-    if sub_command == "down":
-        return open_instance_terminate_modal(trigger_id=trigger_id, user_name=user_name)
+    if sub_command in ["down", "start", "stop"]:
+        return open_instance_operate_modal(
+            trigger_id=trigger_id,
+            user_name=user_name,
+            command=sub_command.replace("down", "terminate"),
+        )
 
-    if sub_command == "create_volume":
+    if sub_command == "change":
+        return open_instance_change_modal(trigger_id=trigger_id, user_name=user_name)
+
+    return jsonify(
+        response_type="ephemeral",
+        text="Command must be one of: key, up, down, change, stop, start.",
+    )
+
+
+def handle_ebs_commands(
+    sub_command: str, trigger_id: str, user_id: str, user_name: str
+) -> Response:
+    """
+    Handles EBS-related commands.
+    """
+    if sub_command == "create":
         return open_create_volume_modal(trigger_id=trigger_id, user_name=user_name)
 
-    if "volume" in sub_command:
-        volumes = ec2_client.describe_volumes(
-            Filters=[
-                {"Name": "tag:User", "Values": [user_name]},
-            ]
+    volumes = ec2_client.describe_volumes(
+        Filters=[
+            {"Name": "tag:User", "Values": [user_name]},
+        ]
+    )
+    if not volumes["Volumes"]:
+        return jsonify(
+            response_type="ephemeral",
+            text="No EBS volume found. Please /ebs create first.",
         )
-        if not volumes["Volumes"]:
-            return jsonify(
-                response_type="ephemeral",
-                text="No EBS volume found. Please /ec2 create_volume first.",
-            )
-        volume_id = volumes["Volumes"][0]["VolumeId"]
+    volume_id = volumes["Volumes"][0]["VolumeId"]
 
-    if sub_command == "resize_volume":
+    if sub_command == "resize":
         return open_resize_volume_modal(trigger_id=trigger_id, user_name=user_name)
 
-    if sub_command == "attach_volume":
+    if sub_command == "attach":
         return open_attach_volume_modal(
             trigger_id=trigger_id,
             user_name=user_name,
         )
 
-    if sub_command == "detach_volume":
+    if sub_command == "detach":
         threading.Thread(
             target=handle_volume_detachment,
             args=(
@@ -137,13 +158,13 @@ def handle_ec2_commands(
             text="Detaching EBS volume...",
         )
 
-    if sub_command == "destroy_volume":
+    if sub_command == "destroy":
         return jsonify(
             response_type="ephemeral",
-            text="If you are sure you want to destroy the EBS volume, please type: /ec2 destroy_volume please.",
+            text="If you are sure you want to destroy the EBS volume, please type: /ebs destroy please.",
         )
 
-    if sub_command == "destroy_volume please":
+    if sub_command == "destroy please":
         threading.Thread(
             target=handle_volume_destruction,
             args=(
@@ -158,7 +179,7 @@ def handle_ec2_commands(
 
     return jsonify(
         response_type="ephemeral",
-        text="Command must be one of: key, up, down, create_volume, resize_volume, attach_volume, detach_volume or destroy_volume.",
+        text="Command must be one of: create, resize, attach, detach or destroy.",
     )
 
 
@@ -214,14 +235,7 @@ def open_key_modal(trigger_id: str) -> Response:
     return Response(status=200)
 
 
-def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
-    """
-    Opens the instance launch modal.
-    """
-    ami_options = [
-        {"text": {"type": "plain_text", "text": ami}, "value": ami}
-        for ami in config["amis"]
-    ]
+def get_instance_type_options() -> list:
     instance_type_options = [
         {
             "text": {
@@ -232,6 +246,18 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
         }
         for instance_type, cost in config["instance_types"].items()
     ]
+    return instance_type_options
+
+
+def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
+    """
+    Opens the instance launch modal.
+    """
+    ami_options = [
+        {"text": {"type": "plain_text", "text": ami}, "value": ami}
+        for ami in config["amis"]
+    ]
+    instance_type_options = get_instance_type_options()
     mount_options = [
         {
             "text": {
@@ -350,21 +376,21 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
     return Response(status=200)
 
 
-def get_instance_options(user_name: str) -> list:
+def get_instance_options(user_name: str, states: list[str]) -> list:
     """
     Retrieves instance options for a given user.
     """
     instances = ec2_client.describe_instances(
         Filters=[
             {"Name": "tag:User", "Values": [user_name]},
-            {"Name": "instance-state-name", "Values": ["pending", "running"]},
+            {"Name": "instance-state-name", "Values": states},
         ]
     )
     instance_options = [
         {
             "text": {
                 "type": "plain_text",
-                "text": f"{instance['InstanceId']} ({instance['InstanceType']})",
+                "text": f"{instance['InstanceId']} ({instance['InstanceType']}) - {instance['State']['Name']}",
             },
             "value": instance["InstanceId"],
         }
@@ -374,19 +400,31 @@ def get_instance_options(user_name: str) -> list:
     return instance_options
 
 
-def open_instance_terminate_modal(trigger_id: str, user_name: str) -> Response:
+def open_instance_operate_modal(
+    trigger_id: str, user_name: str, command: str
+) -> Response:
     """
     Opens the instance termination modal.
     """
-    instance_options = get_instance_options(user_name=user_name)
+    states = {
+        "stop": ["running"],
+        "start": ["stopped"],
+        "terminate": ["pending", "running", "stopping", "stopped"],
+    }
+    instance_options = get_instance_options(user_name=user_name, states=states[command])
     if len(instance_options) == 0:
-        return jsonify(response_type="ephemeral", text="No EC2 instances to terminate.")
+        return jsonify(
+            response_type="ephemeral", text=f"No EC2 instances to {command}."
+        )
 
     modal = {
         "type": "modal",
-        "callback_id": "terminate_instance",
-        "title": {"type": "plain_text", "text": "Terminate EC2 Instances"},
-        "submit": {"type": "plain_text", "text": "Terminate"},
+        "callback_id": f"{command}_instance",
+        "title": {
+            "type": "plain_text",
+            "text": f"{command.capitalize()} EC2 Instances",
+        },
+        "submit": {"type": "plain_text", "text": command.capitalize()},
         "blocks": [
             {
                 "type": "input",
@@ -398,6 +436,58 @@ def open_instance_terminate_modal(trigger_id: str, user_name: str) -> Response:
                 },
                 "label": {"type": "plain_text", "text": "Select Instances"},
             }
+        ],
+    }
+
+    try:
+        client.views_open(trigger_id=trigger_id, view=modal)
+    except SlackApiError as e:
+        return jsonify(status=500, text=f"Failed to open modal: {e.response['error']}")
+
+    return Response(status=200)
+
+
+def open_instance_change_modal(trigger_id: str, user_name: str) -> Response:
+    """
+    Opens the instance change modal.
+    """
+    instance_options = get_instance_options(
+        user_name=user_name, states=["pending", "running"]
+    )
+    if len(instance_options) == 0:
+        return jsonify(response_type="ephemeral", text="No EC2 instances to change.")
+    instance_type_options = get_instance_type_options()
+
+    modal = {
+        "type": "modal",
+        "callback_id": "change_instance",
+        "title": {"type": "plain_text", "text": "Change EC2 Instance Type"},
+        "submit": {"type": "plain_text", "text": "Change"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": "instance_selection",
+                "element": {
+                    "type": "static_select",
+                    "action_id": "selected_instances",
+                    "options": instance_options,
+                },
+                "label": {"type": "plain_text", "text": "Select Instances"},
+            },
+            {
+                "type": "input",
+                "block_id": "instance_type_choice",
+                "element": {
+                    "type": "static_select",
+                    "action_id": "instance_type",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Select Instance Type",
+                    },
+                    "options": instance_type_options,
+                },
+                "label": {"type": "plain_text", "text": "Instance Type"},
+            },
         ],
     }
 
@@ -421,7 +511,7 @@ def open_create_volume_modal(trigger_id: str, user_name: str) -> Response:
     if volumes["Volumes"]:
         return jsonify(
             response_type="ephemeral",
-            text="EBS volume already exists, please /ec2 destroy_volume first.",
+            text="EBS volume already exists, please /ebs destroy first.",
         )
 
     modal = {
@@ -470,7 +560,7 @@ def open_resize_volume_modal(trigger_id: str, user_name: str) -> Response:
     if not volumes["Volumes"]:
         return jsonify(
             response_type="ephemeral",
-            text="No EBS volume found. Please /ec2 create_volume first.",
+            text="No EBS volume found. Please /ebs create first.",
         )
 
     modal = {
@@ -514,7 +604,9 @@ def open_attach_volume_modal(
     """
     Opens the volume attachment modal.
     """
-    instance_options = get_instance_options(user_name=user_name)
+    instance_options = get_instance_options(
+        user_name=user_name, states=["pending", "running"]
+    )
     if len(instance_options) == 0:
         return jsonify(response_type="ephemeral", text="No instances to attach to.")
 
@@ -584,16 +676,42 @@ def handle_interactions(payload: Dict[str, Any]) -> None:
             ),
         ).start()
 
-    elif callback_id == "terminate_instance":
+    elif callback_id in ["terminate_instance", "stop_instance", "start_instance"]:
         selected_instances = [
             option["value"]
             for option in values["instance_selection"]["selected_instances"][
                 "selected_options"
             ]
         ]
+        handle_instance_operation = {
+            "terminate_instance": handle_instance_termination,
+            "stop_instance": handle_instance_stopping,
+            "start_instance": handle_instance_starting,
+        }
         threading.Thread(
-            target=handle_instance_termination,
+            target=handle_instance_operation[callback_id],
             args=(user_id, selected_instances),
+        ).start()
+
+    elif callback_id == "change_instance":
+        instance_id = values["instance_selection"]["selected_instances"][
+            "selected_option"
+        ]["value"]
+        instance_type = values["instance_type_choice"]["instance_type"][
+            "selected_option"
+        ]["value"]
+        instance = ec2_client.describe_instances(InstanceIds=[instance_id])[
+            "Reservations"
+        ][0]["Instances"][0]
+        if instance["InstanceType"] == instance_type:
+            client.chat_postMessage(
+                channel=user_id,
+                text=f"Instance {instance_id} is already of type {instance_type}.",
+            )
+            return
+        threading.Thread(
+            target=handle_instance_change,
+            args=(user_id, instance_id, instance_type),
         ).start()
 
     elif callback_id == "create_volume":
@@ -720,6 +838,67 @@ def handle_instance_termination(user_id: str, instance_ids: list) -> None:
         )
 
 
+def handle_instance_stopping(user_id: str, instance_ids: list) -> None:
+    """
+    Handles instance stopping.
+    """
+    try:
+        ec2_client.stop_instances(InstanceIds=instance_ids)
+        stopped_instances = ", ".join(instance_ids)
+        waiter = ec2_client.get_waiter("instance_stopped")
+        waiter.wait(InstanceIds=instance_ids)
+        client.chat_postMessage(
+            channel=user_id, text=f"Stopped instances: {stopped_instances}"
+        )
+    except ec2_client.exceptions.ClientError as e:
+        client.chat_postMessage(
+            channel=user_id,
+            text=f"Error stopping instances: {e.response['Error']['Message']}",
+        )
+
+
+def handle_instance_starting(user_id: str, instance_ids: list) -> None:
+    """
+    Handles instance starting.
+    """
+    try:
+        ec2_client.start_instances(InstanceIds=instance_ids)
+        started_instances = ", ".join(instance_ids)
+        waiter = ec2_client.get_waiter("instance_running")
+        waiter.wait(InstanceIds=instance_ids)
+        client.chat_postMessage(
+            channel=user_id, text=f"Started instances: {started_instances}"
+        )
+    except ec2_client.exceptions.ClientError as e:
+        client.chat_postMessage(
+            channel=user_id,
+            text=f"Error starting instances: {e.response['Error']['Message']}",
+        )
+
+
+def handle_instance_change(user_id: str, instance_id: str, instance_type: str) -> None:
+    try:
+        ec2_client.stop_instances(InstanceIds=[instance_id])
+        waiter = ec2_client.get_waiter("instance_stopped")
+        waiter.wait(InstanceIds=[instance_id])
+
+        ec2_client.modify_instance_attribute(
+            InstanceId=instance_id, Attribute="instanceType", Value=instance_type
+        )
+        ec2_client.start_instances(InstanceIds=[instance_id])
+        waiter = ec2_client.get_waiter("instance_running")
+        waiter.wait(InstanceIds=[instance_id])
+        client.chat_postMessage(
+            channel=user_id,
+            text=f"Changed instance {instance_id} to type {instance_type} successfully.",
+        )
+    except ec2_client.exceptions.ClientError as e:
+        client.chat_postMessage(
+            channel=user_id,
+            text=f"Error change instance type: {e.response['Error']['Message']}",
+        )
+
+
 def handle_volume_creation(user_id: str, user_name: str, size: int) -> None:
     """
     Handles volume creation.
@@ -787,7 +966,8 @@ def handle_volume_attachment(user_id: str, volume_id: str, instance_id: str) -> 
         waiter = ec2_client.get_waiter("volume_in_use")
         waiter.wait(VolumeIds=[volume_id])
         client.chat_postMessage(
-            channel=user_id, text="EBS volume attached successfully."
+            channel=user_id,
+            text=f"EBS volume attached to instance {instance_id} successfully.",
         )
     except ec2_client.exceptions.ClientError as e:
         client.chat_postMessage(
