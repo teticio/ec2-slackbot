@@ -1,3 +1,7 @@
+"""
+This module contains the Flask application that handles Slack events and commands.
+"""
+
 import json
 import os
 import threading
@@ -14,7 +18,7 @@ from slack_sdk.signature import SignatureVerifier
 
 from ec2 import launch_ec2_instance
 
-config = yaml.safe_load(open("config.yaml"))
+config = yaml.safe_load(open("config.yaml", "r", encoding="utf-8"))
 
 app = Flask(__name__)
 client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
@@ -79,17 +83,22 @@ def handle_commands() -> Response:
     user_name = data.get("user_name")
 
     if command == "/ec2":
-        return handle_ec2_commands(sub_command, trigger_id, user_id, user_name)
+        return handle_ec2_commands(
+            sub_command=sub_command, trigger_id=trigger_id, user_name=user_name
+        )
 
     if command == "/ebs":
-        return handle_ebs_commands(sub_command, trigger_id, user_id, user_name)
+        return handle_ebs_commands(
+            sub_command=sub_command,
+            trigger_id=trigger_id,
+            user_id=user_id,
+            user_name=user_name,
+        )
 
     return jsonify(response_type="ephemeral", text="Command not recognized.")
 
 
-def handle_ec2_commands(
-    sub_command: str, trigger_id: str, user_id: str, user_name: str
-) -> Response:
+def handle_ec2_commands(sub_command: str, trigger_id: str, user_name: str) -> Response:
     """
     Handles EC2-related commands.
     """
@@ -236,6 +245,9 @@ def open_key_modal(trigger_id: str) -> Response:
 
 
 def get_instance_type_options() -> list:
+    """
+    Retrieves instance type options.
+    """
     instance_type_options = [
         {
             "text": {
@@ -268,7 +280,7 @@ def open_instance_launch_modal(trigger_id: str, user_name: str) -> Response:
         }
     ]
     try:
-        boto3.client("sagemaker").describe_user_profile(
+        uid = boto3.client("sagemaker").describe_user_profile(
             DomainId=config["sagemaker_studio_domain_id"],
             UserProfileName=user_name.replace(".", "-"),
         )["HomeEfsFileSystemUid"]
@@ -877,6 +889,9 @@ def handle_instance_starting(user_id: str, instance_ids: list) -> None:
 
 
 def handle_instance_change(user_id: str, instance_id: str, instance_type: str) -> None:
+    """
+    Handles instance type change.
+    """
     try:
         ec2_client.stop_instances(InstanceIds=[instance_id])
         waiter = ec2_client.get_waiter("instance_stopped")
