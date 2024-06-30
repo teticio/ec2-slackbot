@@ -214,7 +214,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 if ! grep -Fxq "$authorized_key" $HOME/.ssh/authorized_keys; then
                     echo "$authorized_key" >> $HOME/.ssh/authorized_keys
                 fi
-                sudo chown $USER:$USER $HOME/.ssh/authorized_keys
+                sudo chown -R $USER:$USER $HOME/.ssh
                 """
             )
 
