@@ -5,7 +5,7 @@ for handling AWS-related operations.
 
 from datetime import datetime
 from textwrap import dedent
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import boto3
 
@@ -15,7 +15,7 @@ class AWSHandler:
     A class to handle AWS-related operations.
     """
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         self.ec2_client = boto3.client("ec2", region_name=config["region"])
         self.config = config
 
@@ -38,7 +38,7 @@ class AWSHandler:
             "Reservations"
         ][0]["Instances"][0]["InstanceType"]
 
-    def get_running_instance_details(self) -> List[Dict[str, any]]:
+    def get_running_instance_details(self) -> List[Dict[str, Any]]:
         """
         Retrieves the details of all running instances.
         """
@@ -76,7 +76,7 @@ class AWSHandler:
 
         return instance_details
 
-    def get_volume_for_user(self, user_name: str) -> Optional[Dict]:
+    def get_volume_for_user(self, user_name: str) -> Optional[Dict[str, Any]]:
         """
         Retrieves the volume ID, size and attachments for a given user's volume.
         """
@@ -114,7 +114,7 @@ class AWSHandler:
             pass
         self.ec2_client.import_key_pair(KeyName=user_name, PublicKeyMaterial=public_key)
 
-    def get_tags_for_user(self, user_name: str) -> List[Dict]:
+    def get_tags_for_user(self, user_name: str) -> List[Dict[str, str]]:
         """
         Retrieves the tags for a given user.
         """
@@ -332,7 +332,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
         waiter = self.ec2_client.get_waiter("volume_in_use")
         waiter.wait(VolumeIds=[volume_id])
 
-    def detach_volume(self, volume_id: str, attachments: List[Dict]) -> None:
+    def detach_volume(self, volume_id: str, attachments: List[Dict[str, Any]]) -> None:
         """
         Detaches the volume with the given user ID.
         """

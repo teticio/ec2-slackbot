@@ -5,9 +5,9 @@ for handling Slack events and commands.
 
 import json
 import threading
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from flask import Response, jsonify
+from flask import Request, Response, jsonify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.signature import SignatureVerifier
@@ -21,8 +21,12 @@ class SlackHandler:
     """
 
     def __init__(
-        self, config: Dict, token: str, signing_secret: str, aws_handler: AWSHandler
-    ):
+        self,
+        config: Dict[str, Any],
+        token: str,
+        signing_secret: str,
+        aws_handler: AWSHandler,
+    ) -> None:
         self.client = WebClient(token=token)
         self.config = config
         self.aws_handler = aws_handler
@@ -47,7 +51,7 @@ class SlackHandler:
 
     def send_warning(
         self, user_id: str, instance_id: str, instance_type: str, running_days: int
-    ):
+    ) -> None:
         """
         Send a warning message to the user.
         """
@@ -63,7 +67,7 @@ class SlackHandler:
         except SlackApiError as e:
             print(f"Error sending warning: {e.response['error']}")
 
-    def get_request_data(self, request):
+    def get_request_data(self, request: Request) -> Optional[Dict[str, Any]]:
         """
         Get the data from the request based on the content type.
         """
@@ -73,7 +77,7 @@ class SlackHandler:
             return request.form
         return None
 
-    def handle_events(self, data):
+    def handle_events(self, data: Dict[str, Any]) -> Response:
         """
         Handle incoming events from Slack.
         """
@@ -86,7 +90,7 @@ class SlackHandler:
             return jsonify({"challenge": data["challenge"]})
         return Response(status=200)
 
-    def handle_commands(self, data):
+    def handle_commands(self, data: Dict[str, Any]) -> Response:
         """
         Handle incoming commands from Slack.
         """
@@ -104,7 +108,7 @@ class SlackHandler:
 
         return jsonify(response_type="ephemeral", text="Command not recognized.")
 
-    def handle_ec2_commands(self, sub_command, trigger_id, user_name):
+    def handle_ec2_commands(self, sub_command, trigger_id, user_name) -> None:
         """
         Handles EC2-related commands.
         """
@@ -134,7 +138,7 @@ class SlackHandler:
             text="Command must be one of: key, up, down, change, stop, start.",
         )
 
-    def handle_ebs_commands(self, sub_command, trigger_id, user_id, user_name):
+    def handle_ebs_commands(self, sub_command, trigger_id, user_id, user_name) -> None:
         """
         Handles EBS-related commands.
         """
@@ -634,7 +638,7 @@ class SlackHandler:
                 "instance_type": instance_type,
                 "user_name": user_name,
                 "volume_id": volume["id"] if volume is not None else None,
-                "startup_script": ami["startup_script"] + startup_script,
+                "startup_script": ami["startup_script"] + (startup_script or ""),
                 "mount_option": mount_option,
             }
             success_message = "EC2 instance {} launched successfully."
@@ -747,7 +751,7 @@ class SlackHandler:
         Handles AWS commands in a separate thread.
         """
 
-        def run_command():
+        def run_command() -> None:
             """
             Run the AWS command.
             """

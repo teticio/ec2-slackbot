@@ -15,7 +15,9 @@ class InstanceChecker:
     A class to periodically check the running instances.
     """
 
-    def __init__(self, config, slack_handler: SlackHandler, aws_handler: AWSHandler):
+    def __init__(
+        self, config, slack_handler: SlackHandler, aws_handler: AWSHandler
+    ) -> None:
         self.config = config
         self.slack_handler = slack_handler
         self.aws_handler = aws_handler
@@ -51,7 +53,7 @@ class InstanceChecker:
         Start the periodic checks with the given interval.
         """
 
-        def run_checks():
+        def run_checks() -> None:
             """
             Run the checks periodically.
             """
