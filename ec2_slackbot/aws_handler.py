@@ -219,19 +219,13 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
             )
 
         if startup_script is not None:
-            user_data_script += (
-                dedent(
-                    """
-                    cd $HOME
-                    sudo su $USER -c 'bash -s' <<'EOF'
-                    """
-                )
-                + startup_script
-                + dedent(
-                    """
-                    EOF
-                    """
-                )
+            user_data_script += dedent(
+                f"""
+                cd $HOME
+                sudo su $USER -c 'bash -s' <<'EOF'
+                {startup_script}
+                EOF
+                """
             )
 
         response = self.ec2_client.run_instances(
