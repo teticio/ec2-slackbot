@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "slackbot"
+name = "ec2-slackbot"
 version = "0.1.0"
 description = ""
 authors = ["Robert Dargavel Smith <teticio@gmail.com>"]
@@ -12,6 +12,8 @@ slack-sdk = "^3.29.0"
 boto3 = "^1.34.131"
 pyyaml = "^6.0.1"
 
+[tool.poetry.scripts]
+ec2-slackbot = "app:main"
 
 [build-system]
 requires = ["poetry-core"]

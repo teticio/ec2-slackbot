@@ -3,11 +3,13 @@ subnet_id: subnet-12345678                 # Subnet ID for the instances
 efs_ip: 172.12.34.255                      # IP address for the EFS in subnet
 sagemaker_studio_domain_id: d-abcdefghijkl # SageMaker Studio domain ID
 security_group_ids:
-  - sg-0123456789abcdef0                   # Security group ID (include SageMaker Studio NFS ingress)
+  - sg-0123456789abcdef0                   # Security group ID (include security-group-for-outbound-nfs)
 iam_instance_profile: roleWithAmazonSSMManagedInstanceCore # IAM instance profile
 instance_types:
   t2.micro: 0.0116                         # Instance type and cost per hour
   t3.medium: 0.0418                        # Instance type and cost per hour
+default_tags:
+  ManagedBy: ec2-slackbot                  # Optional default tags for the instances and volumes
 check_interval_seconds: 43200              # Interval for periodic checks in seconds
 instance_warning_days: 7                   # Days before warning about long-running instances
 large_instance_cost_threshold: 0.5         # Cost threshold for large instances

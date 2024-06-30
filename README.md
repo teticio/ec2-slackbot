@@ -94,7 +94,7 @@ ssh ubuntu@i-...  # i-... is the instance id
 
 The "classic" version of SageMaker Studio mounts a shared EFS drive on all instances. One key advantage of using a regular EC2 instance is the ability to run `docker` directly, unlike SageMaker Studio apps which operate within a docker container.
 
-In order to mount the EFS folder associated with the Slack user, you need to specify the `efs_ip` of the EFS that corresponds to the `subnet`, and the `sagemaker_studio_domain_id` in the `config.yaml` file. Additionally, the `security_groups` should incorporate the one used by SageMaker Studio for NFS ingress.
+In order to mount the EFS folder associated with the Slack user, you need to specify the `efs_ip` of the EFS that corresponds to the `subnet`, and the `sagemaker_studio_domain_id` in the `config.yaml` file. Additionally, the `security_groups` should incorporate the `security-group-for-outbound-nfs` used by SageMaker Studio. The Slack user name should correspond to the SageMaker Studio user name (except that dots are replaced with hyphens).
 
 ## Mount EBS
 
@@ -106,10 +106,10 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
 
 ## Deployment Steps
 
-1. Install the necessary dependencies by running `poetry install --no-root` in your terminal.
+1. Install the necessary dependencies by running `poetry install` in your terminal.
 2. Create a new [Slack app](https://api.slack.com/apps). This will be used to interact with your deployment.
 3. Update the `.env` file with your `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET`. These are essential for the Slack app to function correctly.
-4. Start the application by executing `python app.py` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
+4. Start the application by executing `poetry run ec2-slackbot` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
 5. Lastly, configure your Slack app. Make sure that the manifest file includes the following settings:
 
     ```yaml
@@ -122,7 +122,7 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
         - command: /ec2
           url: https://<your-url>/slack/commands
           description: EC2
-          usage_hint: up | down | change | start | stop
+          usage_hint: key | up | down | change | start | stop
           should_escape: false
         - command: /ebs
           url: https://<your-url>/slack/commands
