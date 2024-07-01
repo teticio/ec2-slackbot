@@ -4,9 +4,9 @@ This repository contains a Slackbot that allows you to manage AWS EC2 instances 
 
 ## Features
 
-- Launch EC2 instances with specified parameters.
-- Terminate running EC2 instances.
-- Upload SSH public keys for EC2 instances.
+- Launch EC2 instances for connecting with SSH.
+- Start, stop and terminate EC2 instances.
+- Change EC2 instance type.
 - Create, attach, detach, and destroy EBS volumes.
 - Optionally mount SageMaker Studio EFS or EBS volume.
 - Warn users to consider terminating long-running EC2 instances.
