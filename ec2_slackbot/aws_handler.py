@@ -19,7 +19,7 @@ class AWSHandler:
         self.ec2_client = boto3.client("ec2", region_name=config["region"])
         self.config = config
 
-    def get_instances_for_user(self, user_name: str, states: List[str]) -> List:
+    def get_instances_for_user(self, user_name: str, states: List[str]) -> Dict[str, Any]:
         """
         Retrieves the instances for a given user in the given states.
         """

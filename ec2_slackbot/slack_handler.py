@@ -108,7 +108,7 @@ class SlackHandler:
 
         return jsonify(response_type="ephemeral", text="Command not recognized.")
 
-    def handle_ec2_commands(self, sub_command, trigger_id, user_name) -> None:
+    def handle_ec2_commands(self, sub_command, trigger_id, user_name) -> Response:
         """
         Handles EC2-related commands.
         """
@@ -138,7 +138,7 @@ class SlackHandler:
             text="Command must be one of: key, up, down, change, stop, start.",
         )
 
-    def handle_ebs_commands(self, sub_command, trigger_id, user_id, user_name) -> None:
+    def handle_ebs_commands(self, sub_command, trigger_id, user_id, user_name) -> Response:
         """
         Handles EBS-related commands.
         """
@@ -613,6 +613,12 @@ class SlackHandler:
         values = payload.get("view", {}).get("state", {}).get("values")
         volume = self.aws_handler.get_volume_for_user(user_name=user_name)
 
+        function=None,
+        user_id=""
+        success_message=""
+        error_message=""
+        kwargs={}
+
         if callback_id == "submit_key":
             public_key = values["key_input"]["public_key"]["value"]
             function = self.aws_handler.create_key_pair
@@ -714,7 +720,7 @@ class SlackHandler:
             volume_size = min(volume_size, self.config["max_volume_size"])
             function = self.aws_handler.resize_volume
             kwargs = {
-                "volume_id": volume["id"],
+                "volume_id": volume["id"] if volume is not None else None,
                 "size": volume_size,
             }
             success_message = (
@@ -729,7 +735,7 @@ class SlackHandler:
             ]["value"]
             function = self.aws_handler.attach_volume
             kwargs = {
-                "volume_id": volume["id"],
+                "volume_id": volume["id"] if volume is not None else None,
                 "instance_id": instance_id,
             }
             success_message = (

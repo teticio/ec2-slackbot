@@ -37,7 +37,7 @@ class WebServer:
                 abort(Response(response="Invalid Slack signature", status=400))
 
         @self.app.route("/slack/events", methods=["POST"])
-        def slack_events() -> None:
+        def slack_events() -> Response:
             """
             Handle incoming events from Slack.
             """
@@ -47,7 +47,7 @@ class WebServer:
             return self.slack_handler.handle_events(data)
 
         @self.app.route("/slack/commands", methods=["POST"])
-        def handle_commands() -> None:
+        def handle_commands() -> Response:
             """
             Handle incoming commands from Slack.
             """
