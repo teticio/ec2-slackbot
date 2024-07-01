@@ -28,10 +28,10 @@ def main() -> None:
         signing_secret=os.environ["SLACK_SIGNING_SECRET"],
     )
     web_server = WebServer(config=config, slack_handler=slack_handler)
-    periodic_checker = InstanceChecker(
+    instance_checker = InstanceChecker(
         config=config, slack_handler=slack_handler, aws_handler=aws_handler
     )
-    periodic_checker.start_periodic_checks(interval=config["check_interval_seconds"])
+    instance_checker.start_periodic_checks(interval=config["check_interval_seconds"])
     web_server.run()
 
 
