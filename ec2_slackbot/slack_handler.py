@@ -174,7 +174,7 @@ class SlackHandler:
                 response_type="ephemeral",
                 text=(
                     "If you are sure you want to destroy the EBS volume, "
-                    "please type: /ebs destroy please.",
+                    "please type: /ebs destroy please."
                 ),
             )
 
