@@ -15,17 +15,19 @@ This repository contains a Slackbot that allows you to manage AWS EC2 instances 
 
 The bot is designed to be used with Slack slash commands. The following commands are supported:
 
-- `/ec2 key`: Upload your public SSH key for EC2 instances. This opens a modal where you can paste your public key.
-- `/ec2 up`: Launch an EC2 instance. This opens a modal where you can select the AMI, instance type, and other options.
-- `/ec2 down`: Terminate running EC2 instances. This opens a modal where you can select the instances to terminate.
-- `/ec2 change`: Modify the configuration of a running EC2 instance. This opens a modal where you can select the instance and the new instance type.
-- `/ec2 start`: Start stopped EC2 instances. This opens a modal where you can select the instances to start.
-- `/ec2 stop`: Stop running EC2 instances. This opens a modal where you can select the instances to stop.
-- `/ebs create`: Create the EBS volume (limited to one per user). This opens a modal where you can select the size.
-- `/ebs resize`: Resize the EBS volume. This opens a modal where you can select the new size.
-- `/ebs attach`: Attach the EBS volume to an EC2 instance. This opens a modal where you can select the instance to attach to.
-- `/ebs detach`: Detach the EBS volume from any EC2 instances.
-- `/ebs destroy please`: Destroy the EBS volume.
+| Command               | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| `/ec2 key`            | **Upload your public SSH key for EC2 instances.** This opens a modal where you can paste your public key. |
+| `/ec2 up`             | **Launch an EC2 instance.** This opens a modal where you can select the AMI, instance type, and other options. |
+| `/ec2 down`           | **Terminate running EC2 instances.** This opens a modal where you can select the instances to terminate. |
+| `/ec2 change`         | **Modify the configuration of a running EC2 instance.** This opens a modal where you can select the instance and the new instance type. |
+| `/ec2 start`          | **Start stopped EC2 instances.** This opens a modal where you can select the instances to start. |
+| `/ec2 stop`           | **Stop running EC2 instances.** This opens a modal where you can select the instances to stop. |
+| `/ebs create`         | **Create the EBS volume (limited to one per user).** This opens a modal where you can select the size. |
+| `/ebs resize`         | **Resize the EBS volume.** This opens a modal where you can select the new size. |
+| `/ebs attach`         | **Attach the EBS volume to an EC2 instance.** This opens a modal where you can select the instance to attach to. |
+| `/ebs detach`         | **Detach the EBS volume from any EC2 instances.** |
+| `/ebs destroy please` | **Destroy the EBS volume.**                                                     |
 
 ## Configuration
 
