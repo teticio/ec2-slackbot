@@ -96,6 +96,9 @@ class AWSHandler:
         """
         Retrieves the SageMaker Studio UID for a given user.
         """
+        if "sagemaker_studio_domain_id" not in self.config:
+            return None
+
         try:
             return boto3.client("sagemaker").describe_user_profile(
                 DomainId=self.config["sagemaker_studio_domain_id"],

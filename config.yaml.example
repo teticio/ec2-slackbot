@@ -1,7 +1,7 @@
 region: eu-west-2                          # AWS region
 subnet_id: subnet-12345678                 # Subnet ID for the instances
-efs_ip: 172.12.34.255                      # IP address for the EFS in subnet
-sagemaker_studio_domain_id: d-abcdefghijkl # SageMaker Studio domain ID
+efs_ip: 172.12.34.255                      # Optional IP address for SageMaker Studio EFS in subnet
+sagemaker_studio_domain_id: d-abcdefghijkl # Optional SageMaker Studio domain ID
 security_group_ids:
   - sg-0123456789abcdef0                   # Security group ID (include security-group-for-outbound-nfs)
 iam_instance_profile: roleWithAmazonSSMManagedInstanceCore # IAM instance profile
