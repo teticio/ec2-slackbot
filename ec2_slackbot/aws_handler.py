@@ -130,9 +130,9 @@ class AWSHandler:
         ami_id: str,
         instance_type: str,
         user_name: str,
-        volume_id: Optional[str] = None,
         startup_script: Optional[str] = None,
         mount_option: Optional[str] = None,
+        volume_id: Optional[str] = None,
     ) -> str:
         """
         Launches an EC2 instance with the given parameters.
@@ -140,9 +140,9 @@ class AWSHandler:
         :param ami_id: The ID of the Amazon Machine Image (AMI).
         :param instance_type: The type of instance.
         :param user_name: The name of the user.
-        :param volume_id: The ID of the volume (optional).
         :param startup_script: The startup script (optional).
         :param mount_option: The mount option ("efs" or "ebs") (optional).
+        :param volume_id: The ID of the EBS volume to mount (optional).
         :return: The ID of the launched instance.
         """
         user_data_script = dedent(
@@ -192,7 +192,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                     device=/dev/nvme1n1
                 fi
 
-                # Format the EBS if necessary
+                # Format the EBS volume if necessary
                 if ! file -s $device | grep -q "filesystem"; then
                     sudo mkfs -L ebs_volume -t ext4 $device
                     sudo mount $device /mnt
@@ -203,7 +203,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 # Save authorized_key
                 read -r authorized_key < $HOME/.ssh/authorized_keys
 
-                # Mount the EBS
+                # Mount the EBS volume
                 sudo mount $device /home
                 echo "LABEL=ebs_volume /home ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
 

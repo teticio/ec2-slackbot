@@ -637,9 +637,9 @@ class SlackHandler:
                 "ami_id": ami["id"],
                 "instance_type": instance_type,
                 "user_name": user_name,
-                "volume_id": volume["id"] if volume is not None else None,
                 "startup_script": ami["startup_script"] + (startup_script or ""),
                 "mount_option": mount_option,
+                "volume_id": volume["id"] if volume is not None else None,
             }
             success_message = "EC2 instance {} launched successfully."
             error_message = "Error launching EC2 instance: {}"
