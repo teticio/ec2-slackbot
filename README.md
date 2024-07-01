@@ -7,7 +7,7 @@ This repository contains a Slackbot that allows you to manage AWS EC2 instances 
 - Launch EC2 instances with specified parameters.
 - Terminate running EC2 instances.
 - Upload SSH public keys for EC2 instances.
-- Create, attach, detach and destroy EBS volumes.
+- Create, attach, detach, and destroy EBS volumes.
 - Optionally mount SageMaker Studio EFS or EBS volume.
 - Warn users to consider terminating long-running EC2 instances.
 
@@ -29,7 +29,7 @@ The bot is designed to be used with Slack slash commands. The following commands
 
 ## Configuration
 
-The bot's configuration is stored in a `config.yaml` file. An example configuration is provided in [`config.yaml.example`](config.yaml.example). The configuration includes AWS region, subnet and security group details, as well as AMI and instance type options.
+The bot's configuration is stored in a `config.yaml` file. An example configuration is provided in [`config.yaml.example`](config.yaml.example). The configuration includes AWS region, subnet, and security group details, as well as AMI and instance type options.
 
 ## SSM (Simple Systems Manager)
 
@@ -65,37 +65,6 @@ For AWS, you need to perform the following steps:
                         "ssm:SessionDocumentAccessCheck": "true"
                     }
                 }
-            }
-        ]
-    }
-    ```
-
-5. The IAM role assigned to `ec2-slackbot` must include the following permissions to manage EC2 instances and EBS volumes:
-
-    ```json
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "ec2:DescribeInstances",
-                    "ec2:RunInstances",
-                    "ec2:TerminateInstances",
-                    "ec2:DescribeVolumes",
-                    "ec2:StopInstances",
-                    "ec2:StartInstances",
-                    "ec2:ModifyInstanceAttribute",
-                    "ec2:CreateVolume",
-                    "ec2:DeleteVolume",
-                    "ec2:AttachVolume",
-                    "ec2:DetachVolume",
-                    "ec2:ModifyVolume",
-                    "ec2:DescribeKeyPairs",
-                    "ec2:ImportKeyPair",
-                    "ec2:DeleteKeyPair"
-                ],
-                "Resource": "arn:aws:ec2:*"
             }
         ]
     }
@@ -138,10 +107,10 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
 ## Deployment Steps
 
 1. Install the necessary dependencies by running `poetry install` in your terminal.
-2. Create a new [Slack app](https://api.slack.com/apps). This will be used to interact with your deployment.
+2. Create a new [Slack app](https://api.slack.com/apps). This app will interact with your deployment.
 3. Update the `.env` file with your `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET`. These are essential for the Slack app to function correctly.
 4. Start the application by executing `poetry run ec2-slackbot` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
-5. Lastly, configure your Slack app. Make sure that the manifest file includes the following settings:
+5. Configure your Slack app with the following manifest settings:
 
     ```yaml
     ...
@@ -172,6 +141,37 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
         is_enabled: true
         request_url: https://<your-url>/slack/events
     ...
+    ```
+
+6. Ensure the IAM role assigned to `ec2-slackbot` includes the following permissions to manage EC2 instances and EBS volumes:
+
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "ec2:DescribeInstances",
+                    "ec2:RunInstances",
+                    "ec2:TerminateInstances",
+                    "ec2:DescribeVolumes",
+                    "ec2:StopInstances",
+                    "ec2:StartInstances",
+                    "ec2:ModifyInstanceAttribute",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteVolume",
+                    "ec2:AttachVolume",
+                    "ec2:DetachVolume",
+                    "ec2:ModifyVolume",
+                    "ec2:DescribeKeyPairs",
+                    "ec2:ImportKeyPair",
+                    "ec2:DeleteKeyPair"
+                ],
+                "Resource": "arn:aws:ec2:*"
+            }
+        ]
+    }
     ```
 
 ## Common Operations with EBS Volumes
