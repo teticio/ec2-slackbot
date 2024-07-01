@@ -18,6 +18,7 @@ max_volume_size: 100                       # Max EBS volume size in GiB
 amis:
   Ubuntu 22.04:                            # AMI name
     id: ami-09627c82937ccdd6d:             # AMI ID
+    user: ubuntu                           # Default user for the AMI
     startup_script: |                      # Startup script for the instance
       # Install pip, build-essential, python3-dev and unzip
       sudo apt-get update

@@ -128,6 +128,7 @@ class AWSHandler:
     def launch_ec2_instance(
         self,
         ami_id: str,
+        ami_user: str,
         instance_type: str,
         user_name: str,
         startup_script: Optional[str] = None,
@@ -138,6 +139,7 @@ class AWSHandler:
         Launches an EC2 instance with the given parameters.
 
         :param ami_id: The ID of the Amazon Machine Image (AMI).
+        :param ami_user: The default user of the AMI.
         :param instance_type: The type of instance.
         :param user_name: The name of the user.
         :param startup_script: The startup script (optional).
@@ -146,11 +148,16 @@ class AWSHandler:
         :return: The ID of the launched instance.
         """
         user_data_script = dedent(
-            """\
+            f"""\
             #!/bin/bash
 
-            USER=ubuntu
+            USER={ami_user}
             HOME=/home/$USER
+
+            # Alias sudo to run commands directly if sudo is not available
+            if ! command -v sudo &> /dev/null; then
+                alias sudo=''
+            fi
             """
         )
 
@@ -159,8 +166,17 @@ class AWSHandler:
             user_data_script += dedent(
                 f"""\
                 # Install NFS client
-                sudo apt-get update
-                sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common -y
+                if command -v apt-get &> /dev/null; then
+                    sudo apt-get update
+                    sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common -y
+                elif command -v yum &> /dev/null; then
+                    sudo yum install -y nfs-utils
+                elif command -v zypper &> /dev/null; then
+                    sudo zypper install -y nfs-client
+                else
+                    echo "Unsupported package manager. Please install nfs client manually."
+                    exit 1
+                fi
 
                 # Save authorized_key
                 read -r authorized_key < $HOME/.ssh/authorized_keys

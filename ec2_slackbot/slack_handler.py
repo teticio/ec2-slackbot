@@ -637,13 +637,17 @@ class SlackHandler:
             function = self.aws_handler.launch_ec2_instance
             kwargs = {
                 "ami_id": ami["id"],
+                "ami_user": ami["user"],
                 "instance_type": instance_type,
                 "user_name": user_name,
-                "startup_script": ami["startup_script"] + (startup_script or ""),
+                "startup_script": ami.get("startup_script", "") + (startup_script or ""),
                 "mount_option": mount_option,
                 "volume_id": volume["id"] if volume is not None else None,
             }
-            success_message = "EC2 instance {} launched successfully."
+            success_message = (
+                "EC2 instance {{0}} launched successfully. You can now run: "
+                f"ssh {ami['user']}@{{0}}"
+            )
             error_message = "Error launching EC2 instance: {}"
 
         elif callback_id in ["terminate_instance", "stop_instance", "start_instance"]:
