@@ -172,8 +172,10 @@ class SlackHandler:
         if sub_command == "destroy":
             return jsonify(
                 response_type="ephemeral",
-                text="If you are sure you want to destroy the EBS volume, "
-                "please type: /ebs destroy please.",
+                text=(
+                    "If you are sure you want to destroy the EBS volume, "
+                    "please type: /ebs destroy please.",
+                ),
             )
 
         if sub_command == "destroy please":
