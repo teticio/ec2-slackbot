@@ -613,12 +613,6 @@ class SlackHandler:
         values = payload.get("view", {}).get("state", {}).get("values")
         volume = self.aws_handler.get_volume_for_user(user_name=user_name)
 
-        function=None,
-        user_id=""
-        success_message=""
-        error_message=""
-        kwargs={}
-
         if callback_id == "submit_key":
             public_key = values["key_input"]["public_key"]["value"]
             function = self.aws_handler.create_key_pair
@@ -742,6 +736,10 @@ class SlackHandler:
                 f"EBS volume attached to instance {instance_id} successfully."
             )
             error_message = "Error attaching EBS volume: {}"
+
+        else:
+            print(f"Unhandled callback_id: {callback_id}")
+            return
 
         self.handle_aws_command(
             function=function,
