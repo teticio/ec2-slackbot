@@ -29,7 +29,7 @@ The bot is designed to be used with Slack slash commands. The following commands
 
 ## Configuration
 
-The bot's configuration is stored in a `config.yaml` file. An example configuration is provided in `config.yaml.example`. The configuration includes AWS region, subnet and security group details, as well as AMI and instance type options.
+The bot's configuration is stored in a `config.yaml` file. An example configuration is provided in [`config.yaml.example`](config.yaml.example). The configuration includes AWS region, subnet and security group details, as well as AMI and instance type options.
 
 ## SSM (Simple Systems Manager)
 
