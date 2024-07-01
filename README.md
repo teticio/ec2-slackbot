@@ -47,7 +47,7 @@ For AWS, you need to perform the following steps:
         --setting-value advanced
     ```
 
-4. Verify that the user's IAM policy includes:
+4. Ensure that the IAM policy for the user includes the following permissions to start an SSM session:
 
     ```json
     {
@@ -65,6 +65,37 @@ For AWS, you need to perform the following steps:
                         "ssm:SessionDocumentAccessCheck": "true"
                     }
                 }
+            }
+        ]
+    }
+    ```
+
+5. The IAM role assigned to `ec2-slackbot` must include the following permissions to manage EC2 instances and EBS volumes:
+
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "ec2:DescribeInstances",
+                    "ec2:RunInstances",
+                    "ec2:TerminateInstances",
+                    "ec2:DescribeVolumes",
+                    "ec2:StopInstances",
+                    "ec2:StartInstances",
+                    "ec2:ModifyInstanceAttribute",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteVolume",
+                    "ec2:AttachVolume",
+                    "ec2:DetachVolume",
+                    "ec2:ModifyVolume",
+                    "ec2:DescribeKeyPairs",
+                    "ec2:ImportKeyPair",
+                    "ec2:DeleteKeyPair"
+                ],
+                "Resource": "arn:aws:ec2:*"
             }
         ]
     }
