@@ -657,11 +657,7 @@ class SlackHandler:
                     "selected_options"
                 ]
             ]
-            command = {
-                "terminate_instance": "terminate",
-                "stop_instance": "stop",
-                "start_instance": "start",
-            }[callback_id]
+            command = callback_id.split("_")[0]
             function = getattr(self.aws_handler, f"{command}_ec2_instances")
             kwargs = {
                 "instance_ids": selected_instances,
