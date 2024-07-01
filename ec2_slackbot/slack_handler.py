@@ -645,7 +645,7 @@ class SlackHandler:
                 "volume_id": volume["id"] if volume is not None else None,
             }
             success_message = (
-                "EC2 instance {{0}} launched successfully. You can now run: "
+                "EC2 instance {0} launched successfully. You can now run: "
                 f"ssh {ami['user']}@{{0}}"
             )
             error_message = "Error launching EC2 instance: {}"
