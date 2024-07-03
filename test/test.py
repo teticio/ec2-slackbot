@@ -193,10 +193,11 @@ class TestSlackHandler(unittest.TestCase):
         return ssh_public_key.decode("utf-8")
 
     @patch("slack_sdk.WebClient.chat_postMessage")
-    def test_create_public_key(self, mock_chat_post_message):
+    def test_instances_and_volumes(self, mock_chat_post_message):
         """
-        Test the create_public_key method.
+        Test operations on instances and volumes.
         """
+        # Test creating a public key
         payload = {
             "type": "view_submission",
             "user": {"id": "U12345", "username": "testuser"},
@@ -220,11 +221,6 @@ class TestSlackHandler(unittest.TestCase):
             channel="U12345", text="Public key updated successfully."
         )
 
-    @patch("slack_sdk.WebClient.chat_postMessage")
-    def test_instances_and_volumes(self, mock_chat_post_message):
-        """
-        Test operations on instances and volumes.
-        """
         # Test launching an instance
         launch_payload = {
             "type": "view_submission",
