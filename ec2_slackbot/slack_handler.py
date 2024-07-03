@@ -138,7 +138,9 @@ class SlackHandler:
             text="Command must be one of: key, up, down, change, stop, start.",
         )
 
-    def handle_ebs_commands(self, sub_command, trigger_id, user_id, user_name) -> Response:
+    def handle_ebs_commands(
+        self, sub_command, trigger_id, user_id, user_name
+    ) -> Response:
         """
         Handles EBS-related commands.
         """
@@ -640,7 +642,8 @@ class SlackHandler:
                 "ami_user": ami["user"],
                 "instance_type": instance_type,
                 "user_name": user_name,
-                "startup_script": ami.get("startup_script", "") + (startup_script or ""),
+                "startup_script": ami.get("startup_script", "")
+                + (startup_script or ""),
                 "mount_option": mount_option,
                 "volume_id": volume["id"] if volume is not None else None,
             }

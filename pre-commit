@@ -1,0 +1,15 @@
+#!/bin/sh
+if ! make test; then
+    echo "Tests failed. Commit aborted."
+    exit 1
+fi
+
+if ! make format; then
+    echo "Formatting failed. Commit aborted."
+    exit 1
+fi
+
+if ! git diff --quiet; then
+    echo "Files were formatted. Please add the changes to your commit."
+    exit 1
+fi

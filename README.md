@@ -108,10 +108,10 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
 
 ## Deployment Steps
 
-1. Install the necessary dependencies by running `poetry install` in your terminal.
+1. Install the necessary dependencies by running `make install` in your terminal. This will also install git hooks to ensure that the code is formatted correctly and passes the tests.
 2. Create a new [Slack app](https://api.slack.com/apps). This app will interact with your deployment.
 3. Update the `.env` file with your `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET`. These are essential for the Slack app to function correctly.
-4. Start the application by executing `poetry run ec2-slackbot` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
+4. Start the application by executing `make run` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
 5. Configure your Slack app with the following manifest settings:
 
     ```yaml
@@ -209,3 +209,9 @@ If you resize the EBS volume with `/ec2 resize_volume` then you will need to run
 ```bash
 sudo resize2fs $device
 ```
+
+## Development
+
+If you want to make changes to the code, it is recommended that you run `make install-dev` to install the development dependencies. This will install the necessary packages for linting, testing, and formatting the code.
+
+Tests can be run using `make test`. The tests are run using `localstack` to simulate AWS services locally. For this to work, you need to have `docker` and the `docker compose` plugin installed on your machine.

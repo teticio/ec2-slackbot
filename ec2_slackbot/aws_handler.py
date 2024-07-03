@@ -15,11 +15,20 @@ class AWSHandler:
     A class to handle AWS-related operations.
     """
 
-    def __init__(self, config) -> None:
-        self.ec2_client = boto3.client("ec2", region_name=config["region"])
+    def __init__(
+        self, config: Dict[str, Any], endpoint_url: Optional[str] = None
+    ) -> None:
+        self.ec2_client = boto3.client(
+            "ec2", region_name=config["region"], endpoint_url=endpoint_url
+        )
+        self.sagemaker_client = boto3.client(
+            "sagemaker", region_name=config["region"], endpoint_url=endpoint_url
+        )
         self.config = config
 
-    def get_instances_for_user(self, user_name: str, states: List[str]) -> Dict[str, Any]:
+    def get_instances_for_user(
+        self, user_name: str, states: List[str]
+    ) -> Dict[str, Any]:
         """
         Retrieves the instances for a given user in the given states.
         """
@@ -100,11 +109,11 @@ class AWSHandler:
             return None
 
         try:
-            return boto3.client("sagemaker").describe_user_profile(
+            return self.sagemaker_client.describe_user_profile(
                 DomainId=self.config["sagemaker_studio_domain_id"],
                 UserProfileName=user_name.replace(".", "-"),
             )["HomeEfsFileSystemUid"]
-        except boto3.client("sagemaker").exceptions.ResourceNotFound:
+        except self.sagemaker_client.exceptions.ResourceNotFound:
             return None
 
     def create_key_pair(self, user_name: str, public_key: str) -> None:
@@ -247,20 +256,24 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 """
             )
 
-        response = self.ec2_client.run_instances(
-            IamInstanceProfile={"Name": self.config["iam_instance_profile"]},
-            ImageId=ami_id,
-            InstanceType=instance_type,
-            KeyName=user_name,
-            MinCount=1,
-            MaxCount=1,
-            SecurityGroupIds=self.config["security_group_ids"],
-            SubnetId=self.config["subnet_id"],
-            TagSpecifications=[
+        params = {
+            "ImageId": ami_id,
+            "InstanceType": instance_type,
+            "KeyName": user_name,
+            "MinCount": 1,
+            "MaxCount": 1,
+            "TagSpecifications": [
                 {"ResourceType": "instance", "Tags": self.get_tags_for_user(user_name)}
             ],
-            UserData=user_data_script,
-        )
+            "UserData": user_data_script,
+        }
+        if "iam_instance_profile" in self.config:
+            params["IamInstanceProfile"] = {"Name": self.config["iam_instance_profile"]}
+        if "security_group_ids" in self.config:
+            params["SecurityGroupIds"] = self.config["security_group_ids"]
+        if "subnet_id" in self.config:
+            params["SubnetId"] = self.config["subnet_id"]
+        response = self.ec2_client.run_instances(**params)
 
         instance_id = response["Instances"][0]["InstanceId"]
         waiter = self.ec2_client.get_waiter("instance_running")

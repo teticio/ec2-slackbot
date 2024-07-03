@@ -13,6 +13,16 @@
             },
             "program": "app.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: test",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {
+                "FLASK_DEBUG": "1"
+            },
+            "program": "test/test.py",
+            "console": "integratedTerminal"
         }
     ]
 }

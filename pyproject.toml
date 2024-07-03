@@ -15,6 +15,11 @@ pyyaml = "^6.0.1"
 [tool.poetry.scripts]
 ec2-slackbot = "app:main"
 
+[tool.poetry.group.dev.dependencies]
+localstack = "^3.5.0"
+black = "^24.4.2"
+isort = "^5.13.2"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

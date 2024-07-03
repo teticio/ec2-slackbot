@@ -2,25 +2,26 @@
 Main entry point for the application. This file is responsible for setting up the
 """
 
+import argparse
 import os
+from argparse import Namespace
 
 import yaml
-from flask import Flask
 
 from ec2_slackbot.aws_handler import AWSHandler
 from ec2_slackbot.instance_checker import InstanceChecker
 from ec2_slackbot.slack_handler import SlackHandler
 from ec2_slackbot.web_server import WebServer
 
-app = Flask(__name__)
 
-
-def main() -> None:
+def create_web_server(arguments: Namespace) -> WebServer:
     """
-    Main entry point for the application.
+    Create the web server with the given arguments.
     """
-    config = yaml.safe_load(open("config.yaml", "r", encoding="utf-8"))
-    aws_handler = AWSHandler(config=config)
+    config = yaml.safe_load(open(arguments.config, "r", encoding="utf-8"))
+    aws_handler = AWSHandler(
+        config=config, endpoint_url=os.environ.get("AWS_ENDPOINT_URL")
+    )
     slack_handler = SlackHandler(
         config=config,
         aws_handler=aws_handler,
@@ -32,7 +33,22 @@ def main() -> None:
         config=config, slack_handler=slack_handler, aws_handler=aws_handler
     )
     instance_checker.start_periodic_checks(interval=config["check_interval_seconds"])
-    web_server.run()
+    return web_server
+
+
+def main() -> None:
+    """
+    Main entry point for the application.
+    """
+    parser = argparse.ArgumentParser(description="EC2 Slackbot Application")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.yaml",
+        help="Path to the configuration file (default: config.yaml)",
+    )
+    args = parser.parse_args()
+    create_web_server(args).run()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@ This module contains the WebServer class, which is responsible
 for handling the web server for the application.
 """
 
+from typing import Any, Dict
+
 from flask import Flask, Response, abort, request
 
 from .slack_handler import SlackHandler
@@ -13,7 +15,7 @@ class WebServer:
     A class to handle the web server for the application.
     """
 
-    def __init__(self, config, slack_handler: SlackHandler) -> None:
+    def __init__(self, config: Dict[str, Any], slack_handler: SlackHandler) -> None:
         self.app = Flask(__name__)
         self.config = config
         self.slack_handler = slack_handler
