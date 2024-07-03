@@ -145,7 +145,7 @@ class SlackHandler:
         Handles EBS-related commands.
         """
         if sub_command == "create":
-            return self.open_create_volume_modal(trigger_id, user_name)
+            return self.open_volume_create_modal(trigger_id, user_name)
 
         volume = self.aws_handler.get_volume_for_user(user_name)
         if volume is None:
@@ -155,10 +155,10 @@ class SlackHandler:
             )
 
         if sub_command == "resize":
-            return self.open_resize_volume_modal(trigger_id, user_name)
+            return self.open_volume_resize_modal(trigger_id, user_name)
 
         if sub_command == "attach":
-            return self.open_attach_volume_modal(trigger_id, user_name)
+            return self.open_volume_attach_modal(trigger_id, user_name)
 
         if sub_command == "detach":
             self.handle_aws_command(
@@ -473,7 +473,7 @@ class SlackHandler:
 
         return Response(status=200)
 
-    def open_create_volume_modal(self, trigger_id: str, user_name: str) -> Response:
+    def open_volume_create_modal(self, trigger_id: str, user_name: str) -> Response:
         """
         Opens the volume creation modal.
         """
@@ -519,7 +519,7 @@ class SlackHandler:
 
         return Response(status=200)
 
-    def open_resize_volume_modal(self, trigger_id: str, user_name: str) -> Response:
+    def open_volume_resize_modal(self, trigger_id: str, user_name: str) -> Response:
         """
         Opens the volume resize modal.
         """
@@ -565,7 +565,7 @@ class SlackHandler:
 
         return Response(status=200)
 
-    def open_attach_volume_modal(self, trigger_id: str, user_name: str) -> Response:
+    def open_volume_attach_modal(self, trigger_id: str, user_name: str) -> Response:
         """
         Opens the volume attachment modal.
         """

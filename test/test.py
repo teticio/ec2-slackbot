@@ -12,7 +12,7 @@ import time
 import unittest
 from argparse import Namespace
 from typing import Any, Dict, Optional
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import requests
 from cryptography.hazmat.primitives import serialization
@@ -192,15 +192,27 @@ class TestSlackHandler(unittest.TestCase):
         )
         return ssh_public_key.decode("utf-8")
 
+    @patch("slack_sdk.WebClient.views_open")
     @patch("slack_sdk.WebClient.chat_postMessage")
-    def test_instances_and_volumes(self, mock_chat_post_message):
+    def test_instance_and_volume_operations(
+        self, mock_chat_post_message: Mock, mock_views_open: Mock
+    ) -> None:
         """
         Test operations on instances and volumes.
         """
+        trigger_id = "12345.12345.12345"
+        user_name = "testuser"
+
+        # Test opening the key modal
+        response = self.web_server.slack_handler.open_key_modal(trigger_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        mock_views_open.assert_called_once()
+
         # Test creating a public key
         payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "submit_key",
                 "state": {
@@ -224,7 +236,7 @@ class TestSlackHandler(unittest.TestCase):
         # Test launching an instance
         launch_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "launch_instance",
                 "state": {
@@ -250,10 +262,26 @@ class TestSlackHandler(unittest.TestCase):
         match = re.search(r"i-[0-9a-fA-F]{17}", self.text)
         instance_id = match.group(0) if match else ""
 
+        # Test opening the instance operate modal (terminate)
+        response = self.web_server.slack_handler.open_instance_operate_modal(
+            trigger_id, user_name, "terminate"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 2)
+
+        # Test opening the instance operate modal (stop)
+        response = self.web_server.slack_handler.open_instance_operate_modal(
+            trigger_id, user_name, "stop"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 3)
+
         # Test stopping the instance
         stop_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "stop_instance",
                 "state": {
@@ -273,10 +301,18 @@ class TestSlackHandler(unittest.TestCase):
             channel="U12345", text=f"Stopped instances: {instance_id}"
         )
 
+        # Test opening the instance operate modal (start)
+        response = self.web_server.slack_handler.open_instance_operate_modal(
+            trigger_id, user_name, "start"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 4)
+
         # Test starting the instance
         start_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "start_instance",
                 "state": {
@@ -296,10 +332,18 @@ class TestSlackHandler(unittest.TestCase):
             channel="U12345", text=f"Started instances: {instance_id}"
         )
 
+        # Test opening the instance change modal
+        response = self.web_server.slack_handler.open_instance_change_modal(
+            trigger_id, user_name
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 5)
+
         # Test changing the instance type
         change_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "change_instance",
                 "state": {
@@ -323,10 +367,18 @@ class TestSlackHandler(unittest.TestCase):
             text=f"Changed instance {instance_id} to type t3.medium successfully.",
         )
 
+        # Test opening the volume create modal
+        response = self.web_server.slack_handler.open_volume_create_modal(
+            trigger_id, user_name
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 6)
+
         # Test creating a volume
         create_volume_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "create_volume",
                 "state": {
@@ -340,12 +392,28 @@ class TestSlackHandler(unittest.TestCase):
             channel="U12345", text="EBS volume of 1 GiB created successfully."
         )
 
+        # Test opening the volume resize modal
+        response = self.web_server.slack_handler.open_volume_resize_modal(
+            trigger_id, user_name
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 7)
+
         # Resizing a volume with localstack doesn't work properly
+
+        # Test opening the volume resize modal
+        response = self.web_server.slack_handler.open_volume_attach_modal(
+            trigger_id, user_name
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"")
+        self.assertEqual(mock_views_open.call_count, 8)
 
         # Test attaching a volume
         attach_volume_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "attach_volume",
                 "state": {
@@ -370,14 +438,14 @@ class TestSlackHandler(unittest.TestCase):
         detach_volume_payload = {
             "command": "/ebs",
             "text": "detach",
-            "trigger_id": "12345.12345.12345",
+            "trigger_id": trigger_id,
             "user_id": "U12345",
-            "user_name": "testuser",
+            "user_name": user_name,
         }
 
         self.post_command(detach_volume_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text=f"EBS volume detached successfully."
+            channel="U12345", text="EBS volume detached successfully."
         )
 
         # Test destroying a volume
@@ -386,7 +454,7 @@ class TestSlackHandler(unittest.TestCase):
             "text": "destroy please",
             "trigger_id": "12345.12345.12345",
             "user_id": "U12345",
-            "user_name": "testuser",
+            "user_name": user_name,
         }
 
         self.post_command(destroy_volume_payload, timeout=10)
@@ -397,7 +465,7 @@ class TestSlackHandler(unittest.TestCase):
         # Test terminating the instance
         terminate_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": "testuser"},
+            "user": {"id": "U12345", "username": user_name},
             "view": {
                 "callback_id": "terminate_instance",
                 "state": {
