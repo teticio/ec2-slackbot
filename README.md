@@ -212,6 +212,6 @@ sudo resize2fs $device
 
 ## Development
 
-If you want to make changes to the code, it is recommended that you run `make install-dev` to install the development dependencies. This will install the necessary packages for linting, testing, and formatting the code.
+If you want to make changes to the code, it is recommended that you run `make install-dev` to install the development dependencies. This will install the necessary packages for testing and formatting the code.
 
 Tests can be run using `make test`. The tests are run using `localstack` to simulate AWS services locally. For this to work, you need to have `docker` and the `docker compose` plugin installed on your machine.
