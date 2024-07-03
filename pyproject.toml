@@ -19,6 +19,7 @@ ec2-slackbot = "app:main"
 localstack = "^3.5.0"
 black = "^24.4.2"
 isort = "^5.13.2"
+coverage = "^7.5.4"
 
 [build-system]
 requires = ["poetry-core"]

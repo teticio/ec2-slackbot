@@ -25,7 +25,7 @@ start-localstack: ## start localstack
 .PHONY: test
 test: start-localstack ## run tests
 	docker compose up -d
-	python -m unittest discover -s test -p "test*.py"
+	coverage run -m unittest discover -s test -p "test*.py"
 
 .PHONY: stop-localstack
 stop-localstack: ## stop localstack
