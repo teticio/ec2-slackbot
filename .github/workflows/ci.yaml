@@ -41,4 +41,12 @@ jobs:
         run: |
           docker compose up -d
           poetry run coverage run -m unittest discover -s test -p "test*.py"
-          poetry run coverage report
+          poetry run coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella      
