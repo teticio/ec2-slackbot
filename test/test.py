@@ -408,7 +408,26 @@ class TestSlackHandler(unittest.TestCase):
         self.assertEqual(response.text, "")
         self.assertEqual(mock_views_open.call_count, 8)
 
-        # Resizing a volume with localstack doesn't work properly
+        logger.info("Testing resizing a volume")
+        resize_volume_payload = {
+            "type": "view_submission",
+            "user": {"id": user_id, "username": user_name},
+            "view": {
+                "callback_id": "resize_volume",
+                "state": {
+                    "values": {"volume_size": {"volume_size_input": {"value": "2"}}}
+                },
+            },
+        }
+
+        self.post_event(resize_volume_payload, timeout=10)
+        mock_chat_post_message.assert_called_with(
+            channel=user_id,
+            text=(
+                "EBS volume resized to 2 GiB successfully. "
+                "Remember to run resize2fs to resize the filesystem."
+            ),
+        )
 
         logger.info("Testing /ebs attach")
         command_payload["text"] = "attach"
