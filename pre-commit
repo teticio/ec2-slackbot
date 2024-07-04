@@ -1,4 +1,10 @@
 #!/bin/sh
+
+if ! git diff --quiet; then
+    echo "You have unstaged changes. Please stage or stash them before committing."
+    exit 1
+fi
+
 if ! make test; then
     echo "Tests failed. Commit aborted."
     exit 1
