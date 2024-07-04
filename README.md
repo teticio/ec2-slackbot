@@ -1,4 +1,4 @@
-# Slackbot for AWS EC2 Management ![CI Status](https://github.com/teticio/ec2-slackbot/actions/workflows/ci.yaml/badge.svg) ![codecov](https://codecov.io/github/teticio/ec2-slackbot/graph/badge.svg?token=14RVJHOK27)](https://codecov.io/github/teticio/ec2-slackbot)
+# Slackbot for AWS EC2 Management ![CI Status](https://github.com/teticio/ec2-slackbot/actions/workflows/ci.yaml/badge.svg) [![codecov](https://codecov.io/github/teticio/ec2-slackbot/graph/badge.svg?token=14RVJHOK27)](https://codecov.io/github/teticio/ec2-slackbot)
 
 This repository contains a Slackbot that allows you to manage AWS EC2 instances directly from Slack. The bot is built with Python, using Flask for the web server and the `slack-sdk` for interacting with the Slack API.
 
