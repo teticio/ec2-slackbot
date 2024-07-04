@@ -1,6 +1,7 @@
 port: 3001
 region: eu-west-2
 zone: eu-west-2a
+efs_ip: 172.12.34.255
 instance_types:
   t2.micro: 0.0116
   t3.medium: 0.0418

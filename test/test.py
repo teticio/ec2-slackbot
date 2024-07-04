@@ -272,7 +272,7 @@ class TestSlackHandler(unittest.TestCase):
                             "instance_type": {"selected_option": {"value": "t2.micro"}}
                         },
                         "mount_options": {
-                            "mount_input": {"selected_option": {"value": "none"}}
+                            "mount_input": {"selected_option": {"value": "efs"}}
                         },
                         "startup_script": {"startup_script_input": {"value": ""}},
                     }
