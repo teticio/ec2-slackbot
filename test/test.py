@@ -27,6 +27,8 @@ from ec2_slackbot.instance_checker import InstanceChecker
 
 os.environ["SLACK_BOT_TOKEN"] = "xoxb-12345"
 os.environ["SLACK_SIGNING_SECRET"] = "12345"
+os.environ["AWS_ACCESS_KEY_ID"] = "test"
+os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
 os.environ["AWS_ENDPOINT_URL"] = "http://localhost:4566"
 
 logging.basicConfig(level=logging.INFO)

@@ -30,9 +30,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install -y pipx
-          pipx ensurepath
-          pipx install poetry
           poetry install
 
       - name: Check formatting
