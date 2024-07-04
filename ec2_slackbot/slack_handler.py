@@ -4,6 +4,7 @@ for handling Slack events and commands.
 """
 
 import json
+import logging
 import threading
 from typing import Any, Dict, List, Optional
 
@@ -44,9 +45,9 @@ class SlackHandler:
                     for user in response["members"]
                     if not user["is_bot"] and not user["deleted"]
                 }
-            print(f"Error fetching users: {response['error']}")
+            logging.error("Error fetching users: %s", response["error"])
         except SlackApiError as e:
-            print(f"Error fetching users: {e.response['error']}")
+            logging.error("Error fetching users: %s", e.response["error"])
         return {}
 
     def send_warning(
@@ -65,7 +66,7 @@ class SlackHandler:
                 ),
             )
         except SlackApiError as e:
-            print(f"Error sending warning: {e.response['error']}")
+            logging.error("Error sending warning: %s", e.response["error"])
 
     def get_request_data(self, request: Request) -> Optional[Dict[str, Any]]:
         """
@@ -257,7 +258,7 @@ class SlackHandler:
         try:
             self.client.views_open(trigger_id=trigger_id, view=modal)
         except SlackApiError as e:
-            print(f"Error opening modal: {e.response['error']}")
+            logging.error("Error opening modal: %s", e.response["error"])
 
         return Response(status=200)
 
@@ -737,7 +738,7 @@ class SlackHandler:
             error_message = "Error attaching EBS volume: {}"
 
         else:
-            print(f"Unhandled callback_id: {callback_id}")
+            logging.warning("Unhandled callback_id: %s", callback_id)
             return
 
         self.handle_aws_command(

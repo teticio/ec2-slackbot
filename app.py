@@ -9,7 +9,6 @@ from argparse import Namespace
 import yaml
 
 from ec2_slackbot.aws_handler import AWSHandler
-from ec2_slackbot.instance_checker import InstanceChecker
 from ec2_slackbot.slack_handler import SlackHandler
 from ec2_slackbot.web_server import WebServer
 
@@ -29,10 +28,6 @@ def create_web_server(arguments: Namespace) -> WebServer:
         signing_secret=os.environ["SLACK_SIGNING_SECRET"],
     )
     web_server = WebServer(config=config, slack_handler=slack_handler)
-    instance_checker = InstanceChecker(
-        config=config, slack_handler=slack_handler, aws_handler=aws_handler
-    )
-    instance_checker.start_periodic_checks(interval=config["check_interval_seconds"])
     return web_server
 
 

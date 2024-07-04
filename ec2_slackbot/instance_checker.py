@@ -6,7 +6,6 @@ for periodically checking the running instances.
 import threading
 import time
 
-from .aws_handler import AWSHandler
 from .slack_handler import SlackHandler
 
 
@@ -15,12 +14,10 @@ class InstanceChecker:
     A class to periodically check the running instances.
     """
 
-    def __init__(
-        self, config, slack_handler: SlackHandler, aws_handler: AWSHandler
-    ) -> None:
+    def __init__(self, config, slack_handler: SlackHandler) -> None:
         self.config = config
         self.slack_handler = slack_handler
-        self.aws_handler = aws_handler
+        self.aws_handler = slack_handler.aws_handler
 
     def periodically_check_instances(self) -> None:
         """

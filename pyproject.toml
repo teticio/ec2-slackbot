@@ -11,12 +11,13 @@ flask = "^3.0.3"
 slack-sdk = "^3.29.0"
 boto3 = "^1.34.131"
 pyyaml = "^6.0.1"
+requests = "^2.32.3"
+cryptography = "^42.0.8"
 
 [tool.poetry.scripts]
 ec2-slackbot = "app:main"
 
 [tool.poetry.group.dev.dependencies]
-localstack = "^3.5.0"
 black = "^24.4.2"
 isort = "^5.13.2"
 coverage = "^7.5.4"

@@ -5,6 +5,7 @@ A module to test the SlackHandler class. It uses localstack to mock the AWS serv
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import threading
@@ -22,8 +23,14 @@ from requests.auth import AuthBase
 from werkzeug.serving import make_server
 
 from app import create_web_server
+from ec2_slackbot.instance_checker import InstanceChecker
 
+os.environ["SLACK_BOT_TOKEN"] = "xoxb-12345"
+os.environ["SLACK_SIGNING_SECRET"] = "12345"
 os.environ["AWS_ENDPOINT_URL"] = "http://localhost:4566"
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class SlackAuth(AuthBase):
@@ -153,13 +160,13 @@ class TestSlackHandler(unittest.TestCase):
             f"http://localhost:{self.port}/slack/events",
             json={"payload": json.dumps(payload)},
             auth=self.slack_auth,
-            timeout=timeout,
+            timeout=5,
         )
 
         self.post_message_event.wait(timeout=timeout)
         self.assertEqual(response.status_code, 200)
 
-    def post_command(self, payload: Any, timeout: int) -> None:
+    def post_command(self, payload: Any, timeout: int) -> requests.Response:
         """
         Post a command to the server and wait for the response.
         """
@@ -170,11 +177,12 @@ class TestSlackHandler(unittest.TestCase):
             f"http://localhost:{self.port}/slack/commands",
             data=payload,
             auth=self.slack_auth,
-            timeout=timeout,
+            timeout=5,
         )
 
         self.post_message_event.wait(timeout=timeout)
         self.assertEqual(response.status_code, 200)
+        return response
 
     @staticmethod
     def generate_dummy_ssh_public_key() -> str:
@@ -202,17 +210,25 @@ class TestSlackHandler(unittest.TestCase):
         """
         trigger_id = "12345.12345.12345"
         user_name = "testuser"
+        user_id = "U12345"
 
-        # Test opening the key modal
-        response = self.web_server.slack_handler.open_key_modal(trigger_id)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
+        command_payload = {
+            "trigger_id": trigger_id,
+            "user_id": user_id,
+            "user_name": user_name,
+        }
+
+        logger.info("Testing /ec2 key")
+        command_payload["command"] = "/ec2"
+        command_payload["text"] = "key"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
         mock_views_open.assert_called_once()
 
-        # Test creating a public key
+        logger.info("Testing creating a public key")
         payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "submit_key",
                 "state": {
@@ -230,13 +246,19 @@ class TestSlackHandler(unittest.TestCase):
         self.mock_post_message(mock_chat_post_message)
         self.post_event(payload, timeout=10)
         mock_chat_post_message.assert_called_once_with(
-            channel="U12345", text="Public key updated successfully."
+            channel=user_id, text="Public key updated successfully."
         )
 
-        # Test launching an instance
+        logger.info("Testing opening the instance launch modal")
+        command_payload["text"] = "up"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 2)
+
+        logger.info("Testing launching an instance")
         launch_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "launch_instance",
                 "state": {
@@ -262,26 +284,22 @@ class TestSlackHandler(unittest.TestCase):
         match = re.search(r"i-[0-9a-fA-F]{17}", self.text)
         instance_id = match.group(0) if match else ""
 
-        # Test opening the instance operate modal (terminate)
-        response = self.web_server.slack_handler.open_instance_operate_modal(
-            trigger_id, user_name, "terminate"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 2)
-
-        # Test opening the instance operate modal (stop)
-        response = self.web_server.slack_handler.open_instance_operate_modal(
-            trigger_id, user_name, "stop"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
+        logger.info("Testing /ec2 down")
+        command_payload["text"] = "down"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
         self.assertEqual(mock_views_open.call_count, 3)
 
-        # Test stopping the instance
+        logger.info("Testing /ec2 stop")
+        command_payload["text"] = "stop"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 4)
+
+        logger.info("Testing stopping the instance")
         stop_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "stop_instance",
                 "state": {
@@ -298,21 +316,19 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(stop_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text=f"Stopped instances: {instance_id}"
+            channel=user_id, text=f"Stopped instances: {instance_id}"
         )
 
-        # Test opening the instance operate modal (start)
-        response = self.web_server.slack_handler.open_instance_operate_modal(
-            trigger_id, user_name, "start"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 4)
+        logger.info("Testing /ec2 start")
+        command_payload["text"] = "start"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 5)
 
-        # Test starting the instance
+        logger.info("Testing starting the instance")
         start_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "start_instance",
                 "state": {
@@ -329,21 +345,19 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(start_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text=f"Started instances: {instance_id}"
+            channel=user_id, text=f"Started instances: {instance_id}"
         )
 
-        # Test opening the instance change modal
-        response = self.web_server.slack_handler.open_instance_change_modal(
-            trigger_id, user_name
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 5)
+        logger.info("Testing /ec2 change")
+        command_payload["text"] = "change"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 6)
 
-        # Test changing the instance type
+        logger.info("Testing changing the instance type")
         change_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "change_instance",
                 "state": {
@@ -363,22 +377,21 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(change_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345",
+            channel=user_id,
             text=f"Changed instance {instance_id} to type t3.medium successfully.",
         )
 
-        # Test opening the volume create modal
-        response = self.web_server.slack_handler.open_volume_create_modal(
-            trigger_id, user_name
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 6)
+        logger.info("Testing /ebs create")
+        command_payload["command"] = "/ebs"
+        command_payload["text"] = "create"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 7)
 
-        # Test creating a volume
+        logger.info("Testing creating a volume")
         create_volume_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "create_volume",
                 "state": {
@@ -389,31 +402,27 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(create_volume_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text="EBS volume of 1 GiB created successfully."
+            channel=user_id, text="EBS volume of 1 GiB created successfully."
         )
 
-        # Test opening the volume resize modal
-        response = self.web_server.slack_handler.open_volume_resize_modal(
-            trigger_id, user_name
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 7)
+        logger.info("Testing /ebs resize")
+        command_payload["text"] = "resize"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 8)
 
         # Resizing a volume with localstack doesn't work properly
 
-        # Test opening the volume resize modal
-        response = self.web_server.slack_handler.open_volume_attach_modal(
-            trigger_id, user_name
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, b"")
-        self.assertEqual(mock_views_open.call_count, 8)
+        logger.info("Testing /ebs attach")
+        command_payload["text"] = "attach"
+        response = self.post_command(command_payload, timeout=0)
+        self.assertEqual(response.text, "")
+        self.assertEqual(mock_views_open.call_count, 9)
 
-        # Test attaching a volume
+        logger.info("Testing attaching a volume")
         attach_volume_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "attach_volume",
                 "state": {
@@ -430,42 +439,30 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(attach_volume_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345",
+            channel=user_id,
             text=f"EBS volume attached to instance {instance_id} successfully.",
         )
 
-        # Test detaching a volume
-        detach_volume_payload = {
-            "command": "/ebs",
-            "text": "detach",
-            "trigger_id": trigger_id,
-            "user_id": "U12345",
-            "user_name": user_name,
-        }
-
-        self.post_command(detach_volume_payload, timeout=10)
+        logger.info("Testing detaching a volume")
+        command_payload["text"] = "detach"
+        response = self.post_command(command_payload, timeout=10)
+        self.assertEqual(response.json()["text"], "Detaching EBS volume...")
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text="EBS volume detached successfully."
+            channel=user_id, text="EBS volume detached successfully."
         )
 
-        # Test destroying a volume
-        destroy_volume_payload = {
-            "command": "/ebs",
-            "text": "destroy please",
-            "trigger_id": "12345.12345.12345",
-            "user_id": "U12345",
-            "user_name": user_name,
-        }
-
-        self.post_command(destroy_volume_payload, timeout=10)
+        logger.info("Testing destroying a volume")
+        command_payload["text"] = "destroy please"
+        response = self.post_command(command_payload, timeout=10)
+        self.assertEqual(response.json()["text"], "Destroying EBS volume...")
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text="EBS volume destroyed successfully."
+            channel=user_id, text="EBS volume destroyed successfully."
         )
 
-        # Test terminating the instance
+        logger.info("Testing terminating the instance")
         terminate_payload = {
             "type": "view_submission",
-            "user": {"id": "U12345", "username": user_name},
+            "user": {"id": user_id, "username": user_name},
             "view": {
                 "callback_id": "terminate_instance",
                 "state": {
@@ -482,7 +479,62 @@ class TestSlackHandler(unittest.TestCase):
 
         self.post_event(terminate_payload, timeout=10)
         mock_chat_post_message.assert_called_with(
-            channel="U12345", text=f"Terminated instances: {instance_id}"
+            channel=user_id, text=f"Terminated instances: {instance_id}"
+        )
+
+    @patch("slack_sdk.WebClient.chat_postMessage")
+    def test_periodically_check_instances(self, mock_chat_post_message: Mock) -> None:
+        """
+        Test the instance checker.
+        """
+        logger.info("Testing the instance checker")
+        user_name = "testuser"
+        user_id = "U12345"
+        small_instance_id = "i-1234567890abcdef0"
+        small_instance_type = "t2.micro"
+        small_running_days = 8
+        large_instance_id = "i-0987654321fedcba0"
+        large_instance_type = "t3.large"
+        large_running_days = 2
+
+        slack_handler = self.web_server.slack_handler
+        slack_handler.get_all_user_ids = Mock(return_value={user_name: user_id})
+        instance_checker = InstanceChecker(self.web_server.config, slack_handler)
+        instance_checker.aws_handler.get_running_instance_details = Mock(
+            return_value=[
+                {
+                    "instance_id": small_instance_id,
+                    "instance_type": small_instance_type,
+                    "instance_cost": 0.0001,
+                    "user_name": user_name,
+                    "running_days": small_running_days,
+                },
+                {
+                    "instance_id": large_instance_id,
+                    "instance_type": large_instance_type,
+                    "instance_cost": 100.0,
+                    "user_name": user_name,
+                    "running_days": large_running_days,
+                },
+            ]
+        )
+        instance_checker.periodically_check_instances()
+
+        mock_chat_post_message.assert_any_call(
+            channel=user_id,
+            text=(
+                f"Warning: Your instance {small_instance_id} ({small_instance_type}) "
+                f"has been running for {small_running_days} days. "
+                "Please consider terminating it with /ec2 down."
+            ),
+        )
+        mock_chat_post_message.assert_any_call(
+            channel=user_id,
+            text=(
+                f"Warning: Your instance {large_instance_id} ({large_instance_type}) "
+                f"has been running for {large_running_days} days. "
+                "Please consider terminating it with /ec2 down."
+            ),
         )
 
 

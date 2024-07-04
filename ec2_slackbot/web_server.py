@@ -7,6 +7,7 @@ from typing import Any, Dict
 
 from flask import Flask, Response, abort, request
 
+from .instance_checker import InstanceChecker
 from .slack_handler import SlackHandler
 
 
@@ -20,6 +21,12 @@ class WebServer:
         self.config = config
         self.slack_handler = slack_handler
         self.setup_routes()
+        self.instance_checker = InstanceChecker(
+            config=config, slack_handler=slack_handler
+        )
+        self.instance_checker.start_periodic_checks(
+            interval=config["check_interval_seconds"]
+        )
 
     def setup_routes(self) -> None:
         """
