@@ -21,7 +21,7 @@
             "env": {
                 "FLASK_DEBUG": "1"
             },
-            "program": "test/test.py",
+            "program": "tests/test.py",
             "console": "integratedTerminal"
         }
     ]

@@ -101,7 +101,7 @@ class TestSlackHandler(unittest.TestCase):
         Set up the server and port before any tests run.
         """
         cls.slack_auth = SlackAuth()
-        cls.web_server = create_web_server(Namespace(config="test/test_config.yaml"))
+        cls.web_server = create_web_server(Namespace(config="tests/test_config.yaml"))
         cls.port = cls.web_server.config.get("port", 3000)
         cls.server = ServerThread(cls.web_server.app, cls.port)
         cls.server.start()

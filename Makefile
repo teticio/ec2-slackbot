@@ -22,7 +22,7 @@ format: ## format code
 test: ## run tests
 	docker compose down
 	docker compose up -d
-	coverage run -m unittest discover -s test -p "test*.py"
+	coverage run -m unittest discover -s tests -p "test*.py"
 	docker compose down
 	coverage html
 	coverage report
