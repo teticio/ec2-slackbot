@@ -109,8 +109,8 @@ class TestSlackHandler(unittest.TestCase):
         healthz_url = f"http://localhost:{cls.port}/healthz"
         while True:
             try:
-                _response = requests.get(healthz_url, timeout=1)
-                if _response.status_code == 200:
+                response = requests.get(healthz_url, timeout=1)
+                if response.status_code == 200:
                     break
             except requests.ConnectionError:
                 pass
