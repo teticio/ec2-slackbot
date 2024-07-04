@@ -216,17 +216,19 @@ class TestSlackHandler(unittest.TestCase):
         """
         self._test_ec2_key(mock_views_open, call_count=1)
         self._test_create_public_key(mock_chat_post_message)
-        self._test_open_instance_launch_modal(mock_views_open, call_count=2)
-        self._test_launch_instance(mock_chat_post_message)
-        self._test_ec2_down(mock_views_open, call_count=3)
-        self._test_ec2_stop(mock_views_open, call_count=4)
-        self._test_stop_instance(mock_chat_post_message)
-        self._test_ec2_start(mock_views_open, call_count=5)
-        self._test_start_instance(mock_chat_post_message)
-        self._test_ec2_change(mock_views_open, call_count=6)
-        self._test_change_instance_type(mock_chat_post_message)
-        self._test_ebs_create(mock_views_open, call_count=7)
+        self._test_ebs_create(mock_views_open, call_count=2)
         self._test_create_volume(mock_chat_post_message)
+        self._test_ec2_up(mock_views_open, call_count=3)
+        self._test_launch_instance(mock_chat_post_message, mount_option="ebs")
+        self._test_terminate_instance(mock_chat_post_message)
+        self._test_launch_instance(mock_chat_post_message, mount_option="efs")
+        self._test_ec2_down(mock_views_open, call_count=4)
+        self._test_ec2_stop(mock_views_open, call_count=5)
+        self._test_stop_instance(mock_chat_post_message)
+        self._test_ec2_start(mock_views_open, call_count=6)
+        self._test_start_instance(mock_chat_post_message)
+        self._test_ec2_change(mock_views_open, call_count=7)
+        self._test_change_instance_type(mock_chat_post_message)
         self._test_ebs_resize(mock_views_open, call_count=8)
         self._test_resize_volume(mock_chat_post_message)
         self._test_ebs_attach(mock_views_open, call_count=9)
@@ -273,19 +275,20 @@ class TestSlackHandler(unittest.TestCase):
             channel=self.user_id, text="Public key updated successfully."
         )
 
-    def _test_open_instance_launch_modal(
-        self, mock_views_open: Mock, call_count: int
-    ) -> None:
+    def _test_ec2_up(self, mock_views_open: Mock, call_count: int) -> None:
         """
-        Test opening the instance launch modal.
+        Test /ec2 up command.
         """
-        logger.info("Testing opening the instance launch modal")
+        logger.info("Testing /ec2 up command")
+        self.command_payload["command"] = "/ec2"
         self.command_payload["text"] = "up"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
         self.assertEqual(mock_views_open.call_count, call_count)
 
-    def _test_launch_instance(self, mock_chat_post_message: Mock) -> None:
+    def _test_launch_instance(
+        self, mock_chat_post_message: Mock, mount_option: str
+    ) -> None:
         """
         Test launching an instance.
         """
@@ -304,7 +307,7 @@ class TestSlackHandler(unittest.TestCase):
                             "instance_type": {"selected_option": {"value": "t2.micro"}}
                         },
                         "mount_options": {
-                            "mount_input": {"selected_option": {"value": "efs"}}
+                            "mount_input": {"selected_option": {"value": mount_option}}
                         },
                         "startup_script": {"startup_script_input": {"value": ""}},
                     }
@@ -322,6 +325,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ec2 down command.
         """
         logger.info("Testing /ec2 down")
+        self.command_payload["command"] = "/ec2"
         self.command_payload["text"] = "down"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -332,6 +336,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ec2 stop command.
         """
         logger.info("Testing /ec2 stop")
+        self.command_payload["command"] = "/ec2"
         self.command_payload["text"] = "stop"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -368,6 +373,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ec2 start command.
         """
         logger.info("Testing /ec2 start")
+        self.command_payload["command"] = "/ec2"
         self.command_payload["text"] = "start"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -404,6 +410,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ec2 change command.
         """
         logger.info("Testing /ec2 change")
+        self.command_payload["command"] = "/ec2"
         self.command_payload["text"] = "change"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -475,6 +482,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ebs resize command.
         """
         logger.info("Testing /ebs resize")
+        self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "resize"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -509,6 +517,7 @@ class TestSlackHandler(unittest.TestCase):
         Test the /ebs attach command.
         """
         logger.info("Testing /ebs attach")
+        self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "attach"
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
@@ -546,6 +555,7 @@ class TestSlackHandler(unittest.TestCase):
         Test detaching a volume.
         """
         logger.info("Testing detaching a volume")
+        self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "detach"
         response = self.post_command(self.command_payload, timeout=10)
         self.assertEqual(response.json()["text"], "Detaching EBS volume...")
@@ -558,6 +568,7 @@ class TestSlackHandler(unittest.TestCase):
         Test destroying a volume.
         """
         logger.info("Testing destroying a volume")
+        self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "destroy please"
         response = self.post_command(self.command_payload, timeout=10)
         self.assertEqual(response.json()["text"], "Destroying EBS volume...")
