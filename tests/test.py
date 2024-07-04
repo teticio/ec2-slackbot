@@ -300,7 +300,7 @@ class TestSlackHandler(unittest.TestCase):
                         "mount_options": {
                             "mount_input": {"selected_option": {"value": mount_option}}
                         },
-                        "startup_script": {"startup_script_input": {"value": ""}},
+                        "startup_script": {"startup_script_input": {"value": "ls"}},
                     }
                 },
             },
