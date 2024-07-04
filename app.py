@@ -5,6 +5,7 @@ Main entry point for the application. This file is responsible for setting up th
 import argparse
 import os
 from argparse import Namespace
+from typing import Dict
 
 import yaml
 
@@ -28,6 +29,14 @@ def create_web_server(arguments: Namespace) -> WebServer:
         signing_secret=os.environ["SLACK_SIGNING_SECRET"],
     )
     web_server = WebServer(config=config, slack_handler=slack_handler)
+
+    @web_server.app.route("/healthz", methods=["GET"])
+    def healthz() -> Dict[str, str]:
+        """
+        Health check endpoint.
+        """
+        return {"status": "ok"}
+
     return web_server
 
 

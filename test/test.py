@@ -23,13 +23,16 @@ from requests.auth import AuthBase
 from werkzeug.serving import make_server
 
 from app import create_web_server
-from ec2_slackbot.instance_checker import InstanceChecker
 
-os.environ["SLACK_BOT_TOKEN"] = "xoxb-12345"
-os.environ["SLACK_SIGNING_SECRET"] = "12345"
-os.environ["AWS_ACCESS_KEY_ID"] = "test"
-os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
-os.environ["AWS_ENDPOINT_URL"] = "http://localhost:4566"
+os.environ.update(
+    {
+        "SLACK_BOT_TOKEN": "xoxb-12345",
+        "SLACK_SIGNING_SECRET": "12345",
+        "AWS_ACCESS_KEY_ID": "test",
+        "AWS_SECRET_ACCESS_KEY": "test",
+        "AWS_ENDPOINT_URL": "http://localhost:4566",
+    }
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -99,14 +102,6 @@ class TestSlackHandler(unittest.TestCase):
         """
         cls.slack_auth = SlackAuth()
         cls.web_server = create_web_server(Namespace(config="test/test_config.yaml"))
-
-        @cls.web_server.app.route("/healthz", methods=["GET"])
-        def healthz() -> Dict[str, str]:
-            """
-            Health check endpoint.
-            """
-            return {"status": "ok"}
-
         cls.port = cls.web_server.config.get("port", 3000)
         cls.server = ServerThread(cls.web_server.app, cls.port)
         cls.server.start()
@@ -136,7 +131,7 @@ class TestSlackHandler(unittest.TestCase):
         self.text = ""
         self.port = self.__class__.port
 
-    def mock_post_message(self, mock_chat_post_message) -> None:
+    def mock_post_message(self, mock_chat_post_message: Mock) -> None:
         """
         Mock the chat_postMessage method and set the event.
         """
@@ -151,7 +146,7 @@ class TestSlackHandler(unittest.TestCase):
 
         mock_chat_post_message.side_effect = side_effect
 
-    def post_event(self, payload: Any, timeout: int) -> None:
+    def post_event(self, payload: Dict[str, Any], timeout: int) -> None:
         """
         Post an event to the server and wait for the response.
         """
@@ -168,7 +163,7 @@ class TestSlackHandler(unittest.TestCase):
         self.post_message_event.wait(timeout=timeout)
         self.assertEqual(response.status_code, 200)
 
-    def post_command(self, payload: Any, timeout: int) -> requests.Response:
+    def post_command(self, payload: Dict[str, Any], timeout: int) -> requests.Response:
         """
         Post a command to the server and wait for the response.
         """
@@ -501,7 +496,7 @@ class TestSlackHandler(unittest.TestCase):
 
         slack_handler = self.web_server.slack_handler
         slack_handler.get_all_user_ids = Mock(return_value={user_name: user_id})
-        instance_checker = InstanceChecker(self.web_server.config, slack_handler)
+        instance_checker = self.web_server.instance_checker
         instance_checker.aws_handler.get_running_instance_details = Mock(
             return_value=[
                 {
