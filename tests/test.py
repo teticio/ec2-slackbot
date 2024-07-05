@@ -169,7 +169,7 @@ class TestSlackHandler(unittest.TestCase):
             waiters.wait(InstanceIds=instance_ids)
         volume_ids = [
             volume["VolumeId"]
-            for volume in boto3.client("ec2").describe_volumes(
+            for volume in ec2_client.describe_volumes(
                 Filters=[{"Name": "tag:User", "Values": [self.user_name]}]
             )["Volumes"]
         ]
