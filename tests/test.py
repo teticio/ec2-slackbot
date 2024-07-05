@@ -214,41 +214,40 @@ class TestSlackHandler(unittest.TestCase):
         """
         Test operations on instances and volumes in order.
         """
-        self._test_command(mock_views_open, "/ec2", "key", call_count=1)
+        self._test_command(mock_views_open, "/ec2", "key")
         self._test_create_public_key(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ebs", "create", call_count=2)
+        self._test_command(mock_views_open, "/ebs", "create")
         self._test_create_volume(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ec2", "up", call_count=3)
+        self._test_command(mock_views_open, "/ec2", "up")
         self._test_launch_instance(mock_chat_post_message, mount_option="ebs")
         self._test_terminate_instance(mock_chat_post_message)
         self._test_launch_instance(mock_chat_post_message, mount_option="efs")
-        self._test_command(mock_views_open, "/ec2", "down", call_count=4)
-        self._test_command(mock_views_open, "/ec2", "stop", call_count=5)
+        self._test_command(mock_views_open, "/ec2", "down")
+        self._test_command(mock_views_open, "/ec2", "stop")
         self._test_stop_instance(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ec2", "start", call_count=6)
+        self._test_command(mock_views_open, "/ec2", "start")
         self._test_start_instance(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ec2", "change", call_count=7)
+        self._test_command(mock_views_open, "/ec2", "change")
         self._test_change_instance_type(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ebs", "resize", call_count=8)
+        self._test_command(mock_views_open, "/ebs", "resize")
         self._test_resize_volume(mock_chat_post_message)
-        self._test_command(mock_views_open, "/ebs", "attach", call_count=9)
+        self._test_command(mock_views_open, "/ebs", "attach")
         self._test_attach_volume(mock_chat_post_message)
         self._test_detach_volume(mock_chat_post_message)
         self._test_destroy_volume(mock_chat_post_message)
         self._test_terminate_instance(mock_chat_post_message)
 
-    def _test_command(
-        self, mock_views_open: Mock, command: str, text: str, call_count: int
-    ) -> None:
+    def _test_command(self, mock_views_open: Mock, command: str, text: str) -> None:
         """
         Test a command with the given text.
         """
         logger.info("Testing %s %s", command, text)
         self.command_payload["command"] = command
         self.command_payload["text"] = text
+        call_count = mock_views_open.call_count
         response = self.post_command(self.command_payload, timeout=0)
         self.assertEqual(response.text, "")
-        self.assertEqual(mock_views_open.call_count, call_count)
+        self.assertEqual(mock_views_open.call_count, call_count + 1)
 
     def _test_create_public_key(self, mock_chat_post_message: Mock) -> None:
         """
