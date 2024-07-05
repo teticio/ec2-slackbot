@@ -129,7 +129,7 @@ class TestSlackHandler(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """
-        Shutdown the server and clean up resources after all tests run.
+        Shutdown the server after all tests run.
         """
         cls.server.shutdown()
 
