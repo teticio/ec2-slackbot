@@ -25,13 +25,13 @@ start-localstack: ## start localstack
 .PHONY: test
 test: start-localstack ## run tests
 	docker compose up -d
-	coverage run -m unittest discover -s tests -p "test*.py"
-	coverage html
-	coverage report
+	poetry run coverage run -m unittest discover -s tests -p "test*.py"
+	poetry run coverage html
+	poetry run coverage report
 
 .PHONY: test-on-aws
 test-on-aws: ## run tests on AWS
-	TEST_ON_AWS=1 make test
+	TEST_ON_AWS=1 poetry run python -m unittest discover -s tests -p "test*.py"
 
 .PHONY: stop-localstack
 stop-localstack: ## stop localstack

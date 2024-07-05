@@ -114,7 +114,6 @@ class TestSlackHandler(unittest.TestCase):
         cls.web_server = create_web_server(Namespace(config=config))
         cls.port = cls.web_server.config.get("port", 3000)
         cls.server = ServerThread(cls.web_server.app, cls.port)
-        cls.user_name = "testuser"
         cls.server.start()
 
         healthz_url = f"http://localhost:{cls.port}/healthz"
@@ -133,28 +132,6 @@ class TestSlackHandler(unittest.TestCase):
         Shutdown the server and clean up resources after all tests run.
         """
         cls.server.shutdown()
-        client = boto3.client("ec2")
-        instance_ids = [
-            instance["InstanceId"]
-            for instance in client.describe_instances(
-                Filters=[{"Name": "tag:User", "Values": [cls.user_name]}]
-            )["Reservations"]
-            for instance in instance["Instances"]
-        ]
-        if len(instance_ids) > 0:
-            client.terminate_instances(InstanceIds=instance_ids)
-            waiters = client.get_waiter("instance_terminated")
-            waiters.wait(InstanceIds=instance_ids)
-        volume_ids = [
-            volume["VolumeId"]
-            for volume in boto3.client("ec2").describe_volumes(
-                Filters=[{"Name": "tag:User", "Values": [cls.user_name]}]
-            )["Volumes"]
-        ]
-        if len(volume_ids) > 0:
-            client.delete_volume(VolumeIds=volume_ids)
-            waiters = client.get_waiter("volume_deleted")
-            waiters.wait(VolumeId=volume_ids[0])
 
     def setUp(self) -> None:
         """
@@ -165,7 +142,7 @@ class TestSlackHandler(unittest.TestCase):
         self.port = self.__class__.port
         self.timeout = 10 if "TEST_ON_AWS" not in os.environ else 300
         self.trigger_id = "12345.12345.12345"
-        self.user_name = __class__.user_name
+        self.user_name = "testuser"
         self.user_id = "U12345"
         self.command_payload = {
             "trigger_id": self.trigger_id,
@@ -173,6 +150,33 @@ class TestSlackHandler(unittest.TestCase):
             "user_name": self.user_name,
         }
         self.instance_id = None
+
+    def tearDown(self) -> None:
+        """
+        Clean up resources after each test.
+        """
+        ec2_client = self.web_server.slack_handler.aws_handler.ec2_client
+        instance_ids = [
+            instance["InstanceId"]
+            for instance in ec2_client.describe_instances(
+                Filters=[{"Name": "tag:User", "Values": [self.user_name]}]
+            )["Reservations"]
+            for instance in instance["Instances"]
+        ]
+        if len(instance_ids) > 0:
+            ec2_client.terminate_instances(InstanceIds=instance_ids)
+            waiters = ec2_client.get_waiter("instance_terminated")
+            waiters.wait(InstanceIds=instance_ids)
+        volume_ids = [
+            volume["VolumeId"]
+            for volume in boto3.client("ec2").describe_volumes(
+                Filters=[{"Name": "tag:User", "Values": [self.user_name]}]
+            )["Volumes"]
+        ]
+        if len(volume_ids) > 0:
+            ec2_client.delete_volume(VolumeIds=volume_ids)
+            waiters = ec2_client.get_waiter("volume_deleted")
+            waiters.wait(VolumeId=volume_ids[0])
 
     def mock_post_message(self, mock_chat_post_message: Mock) -> None:
         """
