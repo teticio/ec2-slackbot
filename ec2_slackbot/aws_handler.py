@@ -5,6 +5,7 @@ for handling AWS-related operations.
 
 from datetime import datetime
 from textwrap import dedent
+from time import sleep
 from typing import Any, Dict, List, Optional
 
 import boto3
@@ -196,7 +197,7 @@ class AWSHandler:
                 # Mount the EFS file system
                 sudo groupmod -g 1001 users
                 sudo usermod -u {uid} -g users $USER
-                echo "{self.config['efs_ip']}:/{uid} $HOME nfs nfsvers=4.1,rsize=1048576,\
+                echo "{self.config.get('efs_ip')}:/{uid} $HOME nfs nfsvers=4.1,rsize=1048576,\
 wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 sudo mount $HOME
 
@@ -345,8 +346,15 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
         Resizes the volume with the given ID.
         """
         self.ec2_client.modify_volume(VolumeId=volume_id, Size=size)
-        waiter = self.ec2_client.get_waiter("volume_available")
-        waiter.wait(VolumeIds=[volume_id])
+        for _ in range(60):
+            response = self.ec2_client.describe_volumes_modifications(
+                VolumeIds=[volume_id]
+            )
+            if not response["VolumesModifications"]:
+                break
+            if response["VolumesModifications"][0]["ModificationState"] == "completed":
+                break
+            sleep(1)
 
     def attach_volume(self, instance_id: str, volume_id: str) -> None:
         """

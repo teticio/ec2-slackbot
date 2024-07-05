@@ -15,6 +15,7 @@ from argparse import Namespace
 from typing import Any, Dict, Optional
 from unittest.mock import Mock, patch
 
+import boto3
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -28,11 +29,17 @@ os.environ.update(
     {
         "SLACK_BOT_TOKEN": "xoxb-12345",
         "SLACK_SIGNING_SECRET": "12345",
-        "AWS_ACCESS_KEY_ID": "test",
-        "AWS_SECRET_ACCESS_KEY": "test",
-        "AWS_ENDPOINT_URL": "http://localhost:4566",
     }
 )
+
+if "TEST_ON_AWS" not in os.environ:
+    os.environ.update(
+        {
+            "AWS_ACCESS_KEY_ID": "test",
+            "AWS_SECRET_ACCESS_KEY": "test",
+            "AWS_ENDPOINT_URL": "http://localhost:4566",
+        }
+    )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -101,9 +108,13 @@ class TestSlackHandler(unittest.TestCase):
         Set up the server and port before any tests run.
         """
         cls.slack_auth = SlackAuth()
-        cls.web_server = create_web_server(Namespace(config="tests/test_config.yaml"))
+        config = (
+            "tests/config.yaml" if "TEST_ON_AWS" not in os.environ else "config.yaml"
+        )
+        cls.web_server = create_web_server(Namespace(config=config))
         cls.port = cls.web_server.config.get("port", 3000)
         cls.server = ServerThread(cls.web_server.app, cls.port)
+        cls.user_name = "testuser"
         cls.server.start()
 
         healthz_url = f"http://localhost:{cls.port}/healthz"
@@ -119,9 +130,31 @@ class TestSlackHandler(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """
-        Shutdown the server after all tests run.
+        Shutdown the server and clean up resources after all tests run.
         """
         cls.server.shutdown()
+        client = boto3.client("ec2")
+        instance_ids = [
+            instance["InstanceId"]
+            for instance in client.describe_instances(
+                Filters=[{"Name": "tag:User", "Values": [cls.user_name]}]
+            )["Reservations"]
+            for instance in instance["Instances"]
+        ]
+        if len(instance_ids) > 0:
+            client.terminate_instances(InstanceIds=instance_ids)
+            waiters = client.get_waiter("instance_terminated")
+            waiters.wait(InstanceIds=instance_ids)
+        volume_ids = [
+            volume["VolumeId"]
+            for volume in boto3.client("ec2").describe_volumes(
+                Filters=[{"Name": "tag:User", "Values": [cls.user_name]}]
+            )["Volumes"]
+        ]
+        if len(volume_ids) > 0:
+            client.delete_volume(VolumeIds=volume_ids)
+            waiters = client.get_waiter("volume_deleted")
+            waiters.wait(VolumeId=volume_ids[0])
 
     def setUp(self) -> None:
         """
@@ -130,8 +163,9 @@ class TestSlackHandler(unittest.TestCase):
         self.post_message_event = threading.Event()
         self.text = ""
         self.port = self.__class__.port
+        self.timeout = 10 if "TEST_ON_AWS" not in os.environ else 300
         self.trigger_id = "12345.12345.12345"
-        self.user_name = "testuser"
+        self.user_name = __class__.user_name
         self.user_id = "U12345"
         self.command_payload = {
             "trigger_id": self.trigger_id,
@@ -271,7 +305,7 @@ class TestSlackHandler(unittest.TestCase):
             },
         }
         self.mock_post_message(mock_chat_post_message)
-        self.post_event(payload, timeout=10)
+        self.post_event(payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_once_with(
             channel=self.user_id, text="Public key updated successfully."
         )
@@ -305,7 +339,7 @@ class TestSlackHandler(unittest.TestCase):
             },
         }
         self.mock_post_message(mock_chat_post_message)
-        self.post_event(launch_payload, timeout=10)
+        self.post_event(launch_payload, timeout=self.timeout)
         self.assertIn("launched successfully.", self.text)
         match = re.search(r"i-[0-9a-fA-F]{17}", self.text)
         self.instance_id = match.group(0) if match else ""
@@ -331,7 +365,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(stop_payload, timeout=10)
+        self.post_event(stop_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text=f"Stopped instances: {self.instance_id}"
         )
@@ -357,7 +391,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(start_payload, timeout=10)
+        self.post_event(start_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text=f"Started instances: {self.instance_id}"
         )
@@ -386,7 +420,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(change_payload, timeout=10)
+        self.post_event(change_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id,
             text=f"Changed instance {self.instance_id} to type t3.medium successfully.",
@@ -407,7 +441,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(create_volume_payload, timeout=10)
+        self.post_event(create_volume_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text="EBS volume of 1 GiB created successfully."
         )
@@ -427,7 +461,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(resize_volume_payload, timeout=10)
+        self.post_event(resize_volume_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id,
             text=(
@@ -457,7 +491,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(attach_volume_payload, timeout=10)
+        self.post_event(attach_volume_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id,
             text=f"EBS volume attached to instance {self.instance_id} successfully.",
@@ -470,7 +504,7 @@ class TestSlackHandler(unittest.TestCase):
         logger.info("Testing detaching a volume")
         self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "detach"
-        response = self.post_command(self.command_payload, timeout=10)
+        response = self.post_command(self.command_payload, timeout=self.timeout)
         self.assertEqual(response.json()["text"], "Detaching EBS volume...")
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text="EBS volume detached successfully."
@@ -483,7 +517,7 @@ class TestSlackHandler(unittest.TestCase):
         logger.info("Testing destroying a volume")
         self.command_payload["command"] = "/ebs"
         self.command_payload["text"] = "destroy please"
-        response = self.post_command(self.command_payload, timeout=10)
+        response = self.post_command(self.command_payload, timeout=self.timeout)
         self.assertEqual(response.json()["text"], "Destroying EBS volume...")
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text="EBS volume destroyed successfully."
@@ -510,7 +544,7 @@ class TestSlackHandler(unittest.TestCase):
                 },
             },
         }
-        self.post_event(terminate_payload, timeout=10)
+        self.post_event(terminate_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text=f"Terminated instances: {self.instance_id}"
         )

@@ -18,14 +18,24 @@ format: ## format code
 	poetry run isort .
 	poetry run black .
 
+.PHONY: start-localstack
+start-localstack: ## start localstack
+	docker compose up -d
+
 .PHONY: test
-test: ## run tests
-	docker compose down
+test: start-localstack ## run tests
 	docker compose up -d
 	coverage run -m unittest discover -s tests -p "test*.py"
-	docker compose down
 	coverage html
 	coverage report
+
+.PHONY: test-on-aws
+test-on-aws: ## run tests on AWS
+	TEST_ON_AWS=1 make test
+
+.PHONY: stop-localstack
+stop-localstack: ## stop localstack
+	docker compose down
 
 .PHONY: run
 run: ## run locally
