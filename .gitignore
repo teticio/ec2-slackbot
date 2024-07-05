@@ -2,6 +2,7 @@ __pycache__
 .env
 .venv
 config.yaml
+!tests/config.yaml
 volume
 htmlcov/
 .coverage
