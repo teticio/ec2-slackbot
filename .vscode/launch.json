@@ -19,7 +19,8 @@
             "type": "debugpy",
             "request": "launch",
             "env": {
-                "FLASK_DEBUG": "1"
+                "FLASK_DEBUG": "1",
+                "TEST_ON_AWS": "1"
             },
             "program": "tests/test.py",
             "console": "integratedTerminal"

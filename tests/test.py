@@ -12,10 +12,11 @@ import threading
 import time
 import unittest
 from argparse import Namespace
-from typing import Any, Dict, Optional
+from io import StringIO
+from typing import Any, Dict, Optional, Tuple
 from unittest.mock import Mock, patch
 
-import boto3
+import paramiko
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -177,6 +178,7 @@ class TestSlackHandler(unittest.TestCase):
             ec2_client.delete_volume(VolumeId=volume_ids[0])
             waiters = ec2_client.get_waiter("volume_deleted")
             waiters.wait(VolumeIds=volume_ids)
+        ec2_client.delete_key_pair(KeyName=self.user_name)
 
     def mock_post_message(self, mock_chat_post_message: Mock) -> None:
         """
@@ -229,7 +231,7 @@ class TestSlackHandler(unittest.TestCase):
         return response
 
     @staticmethod
-    def generate_dummy_ssh_public_key() -> str:
+    def generate_ssh_key_pair() -> Tuple[str, str]:
         """
         Generate a dummy SSH public key.
         """
@@ -242,7 +244,12 @@ class TestSlackHandler(unittest.TestCase):
             encoding=serialization.Encoding.OpenSSH,
             format=serialization.PublicFormat.OpenSSH,
         )
-        return ssh_public_key.decode("utf-8")
+        ssh_private_key = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        return ssh_public_key.decode("utf-8"), ssh_private_key.decode("utf-8")
 
     @patch("slack_sdk.WebClient.views_open")
     @patch("slack_sdk.WebClient.chat_postMessage")
@@ -292,19 +299,14 @@ class TestSlackHandler(unittest.TestCase):
         Test creating a public key.
         """
         logger.info("Testing creating a public key")
+        public_key, _ = self.generate_ssh_key_pair()
         payload = {
             "type": "view_submission",
             "user": {"id": self.user_id, "username": self.user_name},
             "view": {
                 "callback_id": "submit_key",
                 "state": {
-                    "values": {
-                        "key_input": {
-                            "public_key": {
-                                "value": self.generate_dummy_ssh_public_key()
-                            }
-                        }
-                    }
+                    "values": {"key_input": {"public_key": {"value": public_key}}}
                 },
             },
         }
@@ -607,6 +609,53 @@ class TestSlackHandler(unittest.TestCase):
                 "Please consider terminating it with /ec2 down."
             ),
         )
+
+    @staticmethod
+    def ssh_connect(
+        hostname: str, username: str, private_key_text: str, command: str
+    ) -> Tuple[str, str]:
+        """
+        Connect to an SSH server via SSM.
+        """
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        private_key_file = StringIO(private_key_text)
+        private_key = paramiko.RSAKey.from_private_key(private_key_file)
+        proxy_command = (
+            f"bash -c 'export PATH=$PATH:/usr/local/bin; "
+            f"aws ssm start-session --target {hostname} "
+            f"--document-name AWS-StartSSHSession --parameters portNumber=22'"
+        )
+        proxy = paramiko.ProxyCommand(proxy_command)
+        client.connect(
+            hostname, username=username, pkey=private_key, sock=proxy  # type: ignore
+        )
+        _, stdout, stderr = client.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        client.close()
+        return output, error
+
+    def test_ssh(self) -> None:
+        """
+        Test SSH (localstack doesn't support SSM).
+        """
+        if "TEST_ON_AWS" not in os.environ:
+            return
+
+        public_key, private_key = self.generate_ssh_key_pair()
+        ami = self.web_server.config["amis"]["Amazon Linux 2"]
+        aws_handler = self.web_server.slack_handler.aws_handler
+        aws_handler.create_key_pair(user_name=self.user_name, public_key=public_key)
+        instance_id = aws_handler.launch_ec2_instance(
+            ami_id=ami["id"],
+            ami_user=ami["user"],
+            instance_type="t2.micro",
+            user_name=self.user_name,
+        )
+        output, _ = self.ssh_connect(instance_id, ami["user"], private_key, "uname")
+        self.assertEqual(output.strip(), "Linux")
+        aws_handler.terminate_ec2_instances(instance_ids=[instance_id])
 
 
 if __name__ == "__main__":
