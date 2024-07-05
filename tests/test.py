@@ -174,9 +174,9 @@ class TestSlackHandler(unittest.TestCase):
             )["Volumes"]
         ]
         if len(volume_ids) > 0:
-            ec2_client.delete_volume(VolumeIds=volume_ids)
+            ec2_client.delete_volume(VolumeId=volume_ids[0])
             waiters = ec2_client.get_waiter("volume_deleted")
-            waiters.wait(VolumeId=volume_ids[0])
+            waiters.wait(VolumeIds=volume_ids)
 
     def mock_post_message(self, mock_chat_post_message: Mock) -> None:
         """
