@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ec2-slackbot"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Robert Dargavel Smith <teticio@gmail.com>"]
 readme = "README.md"
@@ -14,9 +14,6 @@ pyyaml = "^6.0.1"
 requests = "^2.32.3"
 cryptography = "^42.0.8"
 
-[tool.poetry.scripts]
-ec2-slackbot = "app:main"
-
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
 isort = "^5.13.2"
@@ -26,3 +23,6 @@ paramiko = "^3.4.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ec2-slackbot = "ec2_slackbot.app:main"

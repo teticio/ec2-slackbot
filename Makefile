@@ -39,4 +39,4 @@ stop-localstack: ## stop localstack
 
 .PHONY: run
 run: ## run locally
-	poetry run ec2-slackbot
+	poetry run ec2-slackbot --config config.yaml

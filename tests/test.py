@@ -24,7 +24,7 @@ from flask import Flask
 from requests.auth import AuthBase
 from werkzeug.serving import make_server
 
-from app import create_web_server
+from ec2_slackbot.app import create_web_server
 
 os.environ.update(
     {

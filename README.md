@@ -108,10 +108,10 @@ If you choose not to mount the EBS at `/home`, you can use it as an additional d
 
 ## Deployment Steps
 
-1. Install the necessary dependencies by running `make install` in your terminal.
+1. Install the necessary dependencies by running `make install` in your terminal. Alternatively you can run `pip install ec2-slackbot`.
 2. Create a new [Slack app](https://api.slack.com/apps). This app will interact with your deployment.
 3. Update the `.env` file with your `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET`. These are essential for the Slack app to function correctly.
-4. Start the application by executing `make run` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
+4. Start the application by executing `make run` or `ec2-slackbot --config=config.yaml` in your terminal. This will start the server on port 3000. To make the server accessible publicly, you can use a tool like `ngrok` to forward the port.
 5. Configure your Slack app with the following manifest settings:
 
     ```yaml

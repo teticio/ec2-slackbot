@@ -9,9 +9,9 @@ from typing import Dict
 
 import yaml
 
-from ec2_slackbot.aws_handler import AWSHandler
-from ec2_slackbot.slack_handler import SlackHandler
-from ec2_slackbot.web_server import WebServer
+from .aws_handler import AWSHandler
+from .slack_handler import SlackHandler
+from .web_server import WebServer
 
 
 def create_web_server(arguments: Namespace) -> WebServer:
@@ -49,8 +49,8 @@ def main() -> None:
     parser.add_argument(
         "--config",
         type=str,
-        default="config.yaml",
-        help="Path to the configuration file (default: config.yaml)",
+        required=True,
+        help="Path to the configuration file",
     )
     args = parser.parse_args()
     create_web_server(args).run()
