@@ -31,7 +31,7 @@ test: start-localstack ## run tests
 
 .PHONY: test-on-aws
 test-on-aws: ## run tests on AWS
-	TEST_ON_AWS=1 poetry run python -m unittest discover -s tests -p "test*.py"
+	TEST_ON_AWS=1 poetry run python -m unittest discover -s tests
 
 .PHONY: stop-localstack
 stop-localstack: ## stop localstack
