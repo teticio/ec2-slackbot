@@ -67,4 +67,7 @@ class WebServer:
         """
         Run the web server.
         """
-        self.app.run(port=self.config.get("port", 3000))
+        self.app.run(
+            host=self.config.get("host", "127.0.0.1"),
+            port=self.config.get("port", 3000),
+        )
