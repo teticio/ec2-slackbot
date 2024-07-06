@@ -145,6 +145,18 @@ class SlackHandler:
         """
         Handles EBS-related commands.
         """
+        if sub_command.split()[0] not in [
+            "create",
+            "resize",
+            "attach",
+            "detach",
+            "destroy",
+        ]:
+            return jsonify(
+                response_type="ephemeral",
+                text="Command must be one of: create, resize, attach, detach or destroy.",
+            )
+
         if sub_command == "create":
             return self.open_volume_create_modal(trigger_id, user_name)
 
@@ -191,10 +203,7 @@ class SlackHandler:
             )
             return jsonify(response_type="ephemeral", text="Destroying EBS volume...")
 
-        return jsonify(
-            response_type="ephemeral",
-            text="Command must be one of: create, resize, attach, detach or destroy.",
-        )
+        assert False, "Unhandled EBS command"
 
     def get_instance_type_options(self) -> List:
         """
