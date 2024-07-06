@@ -25,7 +25,7 @@ start-localstack: ## start localstack
 .PHONY: test
 test: start-localstack ## run tests
 	docker compose up -d
-	poetry run coverage run -m unittest discover -s tests -p "test*.py"
+	poetry run coverage run -m unittest discover -s tests
 	poetry run coverage html
 	poetry run coverage report
 
