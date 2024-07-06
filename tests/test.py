@@ -622,9 +622,8 @@ class TestSlackHandler(unittest.TestCase):
         private_key_file = StringIO(private_key_text)
         private_key = paramiko.RSAKey.from_private_key(private_key_file)
         proxy_command = (
-            f"bash -c 'export PATH=$PATH:/usr/local/bin; "
             f"aws ssm start-session --target {hostname} "
-            f"--document-name AWS-StartSSHSession --parameters portNumber=22'"
+            f"--document-name AWS-StartSSHSession --parameters portNumber=22"
         )
         proxy = paramiko.ProxyCommand(proxy_command)
         client.connect(
