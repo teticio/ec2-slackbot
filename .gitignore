@@ -6,3 +6,4 @@ config.yaml
 volume
 htmlcov/
 .coverage
+dist
