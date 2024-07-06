@@ -18,7 +18,8 @@ def create_web_server(arguments: Namespace) -> WebServer:
     """
     Create the web server with the given arguments.
     """
-    config = yaml.safe_load(open(arguments.config, "r", encoding="utf-8"))
+    with open(arguments.config, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
     aws_handler = AWSHandler(
         config=config, endpoint_url=os.environ.get("AWS_ENDPOINT_URL")
     )

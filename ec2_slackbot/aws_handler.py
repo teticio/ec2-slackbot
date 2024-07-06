@@ -325,7 +325,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
         )
         self.start_ec2_instances([instance_id])
 
-    def create_volume(self, user_name: str, size: int) -> None:
+    def create_volume(self, user_name: str, size: int) -> str:
         """
         Creates a volume with the given user name and size.
         """
@@ -340,6 +340,7 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
         response = self.ec2_client.create_volume(**create_volume_params)
         waiter = self.ec2_client.get_waiter("volume_available")
         waiter.wait(VolumeIds=[response["VolumeId"]])
+        return response["VolumeId"]
 
     def resize_volume(self, volume_id: str, size: int) -> None:
         """

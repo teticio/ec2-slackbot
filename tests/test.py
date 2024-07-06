@@ -643,6 +643,7 @@ class TestSlackHandler(unittest.TestCase):
         if "TEST_ON_AWS" not in os.environ:
             return
 
+        logger.info("Testing SSH")
         public_key, private_key = self.generate_ssh_key_pair()
         ami = self.web_server.config["amis"]["Amazon Linux 2"]
         aws_handler = self.web_server.slack_handler.aws_handler
