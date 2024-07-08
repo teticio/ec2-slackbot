@@ -8,11 +8,14 @@
             "name": "Python Debugger: app",
             "type": "debugpy",
             "request": "launch",
+            "module": "ec2_slackbot.app",
             "env": {
                 "FLASK_DEBUG": "1"
             },
-            "program": "app.py",
-            "console": "integratedTerminal"
+            "args": [
+                "--config=config.yaml"
+            ],
+            "justMyCode": false
         },
         {
             "name": "Python Debugger: test",

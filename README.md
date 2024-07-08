@@ -217,3 +217,5 @@ If you want to make changes to the code, it is recommended that you run `make in
 Tests can be run using `make test`. The tests are run using `localstack` to simulate AWS services locally. For this to work, you need to have `docker` and the `docker compose` plugin installed on your machine. Once you have finished testing, you can stop `localstack` by running `make stop-localstack`.
 
 Alternatively, you run the tests on your AWS infrastructure with `make test-on-aws`. This will run the tests on your AWS account, so make sure you have the necessary permissions and configurations set up.
+
+If you want to test the app in Slack before deploying to production, you can either deploy it in a separate Slack workspace or you can set the environment variable `EC2_SLACKBOT_STAGE` to `test-` and create a separate app which will respond to the commands `/test-ec2` and `/test-ebs`.

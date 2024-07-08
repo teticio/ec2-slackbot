@@ -5,6 +5,7 @@ for handling Slack events and commands.
 
 import json
 import logging
+import os
 import threading
 from typing import Any, Dict, List, Optional
 
@@ -95,16 +96,17 @@ class SlackHandler:
         """
         Handle incoming commands from Slack.
         """
+        stage = os.getenv("EC2_SLACKBOT_STAGE", "")
         command = data.get("command")
         sub_command = data.get("text")
         trigger_id = data.get("trigger_id")
         user_id = data.get("user_id")
         user_name = data.get("user_name")
 
-        if command == "/ec2":
+        if command == f"/{stage}ec2":
             return self.handle_ec2_commands(sub_command, trigger_id, user_name)
 
-        if command == "/ebs":
+        if command == f"/{stage}ebs":
             return self.handle_ebs_commands(sub_command, trigger_id, user_id, user_name)
 
         return jsonify(response_type="ephemeral", text="Command not recognized.")
@@ -333,6 +335,23 @@ class SlackHandler:
                         "options": instance_type_options,
                     },
                     "label": {"type": "plain_text", "text": "Instance Type"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "root_ebs_size",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "root_ebs_size_input",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Enter root volume size in GiB",
+                        },
+                        "initial_value": "20",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": f"Root Volume Size in GiB (max {self.config['max_volume_size']})",
+                    },
                 },
                 {
                     "type": "input",
@@ -642,6 +661,8 @@ class SlackHandler:
             instance_type = values["instance_type_choice"]["instance_type"][
                 "selected_option"
             ]["value"]
+            root_ebs_size = int(values["root_ebs_size"]["root_ebs_size_input"]["value"])
+            root_ebs_size = min(root_ebs_size, self.config["max_volume_size"])
             mount_option = values["mount_options"]["mount_input"]["selected_option"][
                 "value"
             ]
@@ -651,6 +672,7 @@ class SlackHandler:
                 "ami_id": ami["id"],
                 "ami_user": ami["user"],
                 "instance_type": instance_type,
+                "root_ebs_size": root_ebs_size,
                 "user_name": user_name,
                 "startup_script": ami.get("startup_script", "")
                 + (startup_script or ""),

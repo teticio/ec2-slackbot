@@ -143,6 +143,7 @@ class AWSHandler:
         ami_id: str,
         ami_user: str,
         instance_type: str,
+        root_ebs_size: int,
         user_name: str,
         startup_script: Optional[str] = None,
         mount_option: Optional[str] = None,
@@ -154,6 +155,7 @@ class AWSHandler:
         :param ami_id: The ID of the Amazon Machine Image (AMI).
         :param ami_user: The default user of the AMI.
         :param instance_type: The type of instance.
+        :param root_ebs_size: The size of the root EBS volume.
         :param user_name: The name of the user.
         :param startup_script: The startup script (optional).
         :param mount_option: The mount option ("efs" or "ebs") (optional).
@@ -263,6 +265,12 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
             "KeyName": user_name,
             "MinCount": 1,
             "MaxCount": 1,
+            "BlockDeviceMappings": [
+                {
+                    "DeviceName": "/dev/sda1",
+                    "Ebs": {"VolumeSize": root_ebs_size, "VolumeType": "gp2"},
+                }
+            ],
             "TagSpecifications": [
                 {"ResourceType": "instance", "Tags": self.get_tags_for_user(user_name)}
             ],

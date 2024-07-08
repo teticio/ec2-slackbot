@@ -336,6 +336,7 @@ class TestSlackHandler(unittest.TestCase):
                         "instance_type_choice": {
                             "instance_type": {"selected_option": {"value": "t2.micro"}}
                         },
+                        "root_ebs_size": {"root_ebs_size_input": {"value": "8"}},
                         "mount_options": {
                             "mount_input": {"selected_option": {"value": mount_option}}
                         },
@@ -651,6 +652,7 @@ class TestSlackHandler(unittest.TestCase):
             ami_id=ami["id"],
             ami_user=ami["user"],
             instance_type="t2.micro",
+            root_ebs_size=8,
             user_name=self.user_name,
         )
         output, _ = self.ssh_connect(instance_id, ami["user"], private_key, "uname")
