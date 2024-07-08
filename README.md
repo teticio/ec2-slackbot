@@ -2,6 +2,8 @@
 
 This repository contains a Slackbot that allows you to manage AWS EC2 instances directly from Slack. The bot is built with Python, using Flask for the web server and the `slack-sdk` for interacting with the Slack API.
 
+![screenshot](screenshot.png)
+
 ## Features
 
 - Launch EC2 instances for connecting with SSH.
@@ -37,7 +39,7 @@ The bot's configuration is stored in a `config.yaml` file. An example configurat
 
 The instances establish a connection using SSH over SSM.
 
-For AWS, you need to perform the following steps:
+The following steps need to be performed on AWS:
 
 1. Create a role and attach the `AmazonSSMManagedInstanceCore` policy to it. Then, set the `iam_instance_profile` in `config.yaml` to the name of this profile.
 2. If your `subnet` is private, you will need to [configure your VPC endpoints](https://repost.aws/knowledge-center/ec2-systems-manager-vpc-endpoints) to allow SSM connections.
@@ -72,10 +74,10 @@ For AWS, you need to perform the following steps:
     }
     ```
 
-For your local machine, you need to:
+For your local machine, users need to:
 
 1. [Install the Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html).
-2. Insert the following lines into your `~/.ssh/config`:
+2. Insert the following lines into `~/.ssh/config`:
 
     ```bash
     # >>> AWS SSM config >>>

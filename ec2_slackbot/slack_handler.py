@@ -300,7 +300,7 @@ class SlackHandler:
         if self.aws_handler.get_volume_for_user(user_name) is not None:
             mount_options.append(
                 {
-                    "text": {"type": "plain_text", "text": "Mount EBS volume at /home"},
+                    "text": {"type": "plain_text", "text": "Mount EBS Volume at /home"},
                     "value": "ebs",
                 }
             )
@@ -385,7 +385,7 @@ class SlackHandler:
                     },
                     "label": {
                         "type": "plain_text",
-                        "text": "Startup Script (Optional)",
+                        "text": "Startup Script",
                     },
                     "optional": True,
                 },
@@ -474,7 +474,7 @@ class SlackHandler:
                         "action_id": "selected_instances",
                         "options": instance_options,
                     },
-                    "label": {"type": "plain_text", "text": "Select Instances"},
+                    "label": {"type": "plain_text", "text": "Select Instance"},
                 },
                 {
                     "type": "input",
