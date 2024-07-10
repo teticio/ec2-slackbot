@@ -189,6 +189,8 @@ The EBS device will either be `/dev/xvdh` or `/dev/nvme1n1` depending on the typ
 ```bash
 if [ -e /dev/xvdh ]; then
     device=/dev/xvdh
+elif [ -e /dev/nvme2n1 ]; then
+    device=/dev/nvme2n1
 else
     device=/dev/nvme1n1
 fi
