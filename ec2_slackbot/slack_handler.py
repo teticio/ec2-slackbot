@@ -300,7 +300,7 @@ class SlackHandler:
         if self.aws_handler.get_volume_for_user(user_name) is not None:
             mount_options.append(
                 {
-                    "text": {"type": "plain_text", "text": "Mount EBS Volume at /home"},
+                    "text": {"type": "plain_text", "text": "Mount EBS Volume at $HOME"},
                     "value": "ebs",
                 }
             )

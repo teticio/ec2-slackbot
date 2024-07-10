@@ -165,6 +165,7 @@ class AWSHandler:
         user_data_script = dedent(
             f"""\
             #!/bin/bash
+            set -v
 
             USER={ami_user}
             HOME=/home/$USER
@@ -219,15 +220,17 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 """\
                 if [ -e /dev/xvdh ]; then
                     device=/dev/xvdh
+                elif [ -e /dev/nvme2n1 ]; then
+                    device=/dev/nvme2n1
                 else
                     device=/dev/nvme1n1
                 fi
 
                 # Format the EBS volume if necessary
-                if ! file -s $device | grep -q "filesystem"; then
+                if ! sudo file -s $device | grep -q "filesystem"; then
                     sudo mkfs -L ebs_volume -t ext4 $device
                     sudo mount $device /mnt
-                    sudo rsync -aXv /home/ /mnt/
+                    sudo rsync -aXv $HOME/ /mnt/
                     sudo umount /mnt
                 fi
 
@@ -235,8 +238,8 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 read -r authorized_key < $HOME/.ssh/authorized_keys
 
                 # Mount the EBS volume
-                sudo mount $device /home
-                echo "LABEL=ebs_volume /home ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+                echo "LABEL=ebs_volume $HOME ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+                sudo mount $HOME
 
                 # Restore authorized_key
                 sudo mkdir -p $HOME/.ssh
@@ -251,11 +254,11 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
 
         if startup_script is not None:
             user_data_script += dedent(
-                f"""
+                f"""\
                 cd $HOME
-                sudo su $USER -c 'bash -s' <<'EOF'
+                sudo su $USER -c 'bash -s' <<'UNLIKELY_STRING'
                 {startup_script}
-                EOF
+                UNLIKELY_STRING
                 """
             )
 

@@ -102,9 +102,9 @@ In order to mount the EFS folder associated with the Slack user, you need to spe
 
 ## Mount EBS
 
-Every Slack user can create an EBS volume with the `/ec2 create_volume` command, which they can mount at `/home`. During the initial setup, the volume will be formatted, and the `/home` directory will be configured. EBS volumes offer higher performance compared to EFS due to their non-networked nature, but they are typically limited to being attached to a single EC2 instance at a time.
+Every Slack user can create an EBS volume with the `/ec2 create_volume` command, which they can mount at `$HOME`. During the initial setup, the volume will be formatted, and the `$HOME` directory will be configured. EBS volumes offer higher performance compared to EFS due to their non-networked nature, but they are typically limited to being attached to a single EC2 instance at a time.
 
-If you choose not to mount the EBS at `/home`, you can use it as an additional device. For more details, refer to the section "Common Operations with EBS Volumes".
+If you choose not to mount the EBS at `$HOME`, you can use it as an additional device. For more details, refer to the section "Common Operations with EBS Volumes".
 
 **Note:** EBS volumes of type `io1` and `io2` support multi-attach, but this requires a cluster setup.
 
@@ -204,6 +204,7 @@ To mount the EBS volume at `/mnt` and ensure it is mounted automatically after a
 
 ```bash
 echo "LABEL=ebs_volume /mnt ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+sudo mount /mnt
 ```
 
 If you resize the EBS volume with `/ec2 resize_volume` then you will need to run
