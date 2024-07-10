@@ -171,11 +171,13 @@ If you choose not to mount the EBS at `$HOME`, you can use it as an additional d
                     "ec2:DescribeKeyPairs",
                     "ec2:ImportKeyPair",
                     "ec2:DeleteKeyPair",
-                    "sagemaker:DescribeUserProfile"
+                    "sagemaker:DescribeUserProfile",
+                    "iam:PassRole"
                 ],
                 "Resource": [
                     "arn:aws:ec2:*",
-                    "arn:aws:sagemaker:*"
+                    "arn:aws:sagemaker:*",
+                    "arn:aws:iam:*"
                 ]
             }
         ]
