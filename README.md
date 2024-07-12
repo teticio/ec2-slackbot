@@ -226,3 +226,5 @@ Tests can be run using `make test`. The tests are run using `localstack` to simu
 Alternatively, you run the tests on your AWS infrastructure with `make test-on-aws`. This will run the tests on your AWS account, so make sure you have the necessary permissions and configurations set up.
 
 If you want to test the app in Slack before deploying to production, you can either deploy it in a separate Slack workspace or you can set the environment variable `EC2_SLACKBOT_STAGE` to `test-` and create a separate app which will respond to the commands `/test-ec2` and `/test-ebs`.
+
+To debug the startup scripts, you can review the output in the `/var/log/cloud-init-output.log` file on the EC2 instance.

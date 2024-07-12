@@ -168,12 +168,22 @@ class AWSHandler:
             set -v
 
             USER={ami_user}
-            HOME=/home/$USER
+            if [ "$USER" == "root" ]; then
+                HOME=/root
+            else
+                HOME=/home/$USER
+            fi
 
             # Alias sudo to run commands directly if sudo is not available
             if ! command -v sudo &> /dev/null; then
                 alias sudo=''
             fi
+
+            # Allow root login via SSH
+            sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+            sudo sed -i "/AuthenticationMethods/d" /etc/ssh/sshd_config
+            echo "AuthenticationMethods publickey" | sudo tee -a /etc/ssh/sshd_config
+            sudo /etc/init.d/ssh restart
             """
         )
 
@@ -258,10 +268,11 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 cd $HOME
                 sudo su $USER -c 'bash -s' <<'UNLIKELY_STRING'
                 {startup_script}
-                UNLIKELY_STRING
                 """
+                + "UNLIKELY_STRING"
             )
 
+        print(user_data_script)
         params = {
             "ImageId": ami_id,
             "InstanceType": instance_type,
