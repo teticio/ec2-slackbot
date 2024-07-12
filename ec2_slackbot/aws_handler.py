@@ -168,22 +168,12 @@ class AWSHandler:
             set -v
 
             USER={ami_user}
-            if [ "$USER" == "root" ]; then
-                HOME=/root
-            else
-                HOME=/home/$USER
-            fi
+            HOME=/home/$USER
 
             # Alias sudo to run commands directly if sudo is not available
             if ! command -v sudo &> /dev/null; then
                 alias sudo=''
             fi
-
-            # Allow root login via SSH
-            sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
-            sudo sed -i "/AuthenticationMethods/d" /etc/ssh/sshd_config
-            echo "AuthenticationMethods publickey" | sudo tee -a /etc/ssh/sshd_config
-            sudo /etc/init.d/ssh restart
             """
         )
 
