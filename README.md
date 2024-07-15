@@ -84,6 +84,8 @@ For your local machine, users need to:
     Host i-* mi-*
         StrictHostKeyChecking accept-new
         ForwardAgent yes
+        ServerAliveInterval 60
+        ServerAliveCountMax 10000
         ProxyCommand aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters "portNumber=%p"
     # <<< AWS SSM config <<<
     ```
