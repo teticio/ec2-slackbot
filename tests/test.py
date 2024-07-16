@@ -287,7 +287,9 @@ class TestSlackHandler(unittest.TestCase):
         Test a command with the given text.
         """
         logger.info("Testing %s %s", command, text)
-        self.command_payload["command"] = command
+        self.command_payload["command"] = command.replace(
+            "/", f"/{os.getenv('EC2_SLACKBOT_STAGE')}"
+        )
         self.command_payload["text"] = text
         call_count = mock_views_open.call_count
         response = self.post_command(self.command_payload, timeout=0)
@@ -509,7 +511,7 @@ class TestSlackHandler(unittest.TestCase):
         Test detaching a volume.
         """
         logger.info("Testing detaching a volume")
-        self.command_payload["command"] = "/ebs"
+        self.command_payload["command"] = f"/{os.getenv('EC2_SLACKBOT_STAGE')}ebs"
         self.command_payload["text"] = "detach"
         response = self.post_command(self.command_payload, timeout=self.timeout)
         self.assertEqual(response.json()["text"], "Detaching EBS volume...")
@@ -522,7 +524,7 @@ class TestSlackHandler(unittest.TestCase):
         Test destroying a volume.
         """
         logger.info("Testing destroying a volume")
-        self.command_payload["command"] = "/ebs"
+        self.command_payload["command"] = f"/{os.getenv('EC2_SLACKBOT_STAGE')}ebs"
         self.command_payload["text"] = "destroy please"
         response = self.post_command(self.command_payload, timeout=self.timeout)
         self.assertEqual(response.json()["text"], "Destroying EBS volume...")

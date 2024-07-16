@@ -262,7 +262,6 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 + "UNLIKELY_STRING"
             )
 
-        print(user_data_script)
         params = {
             "ImageId": ami_id,
             "InstanceType": instance_type,
