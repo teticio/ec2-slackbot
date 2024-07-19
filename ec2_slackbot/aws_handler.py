@@ -177,20 +177,20 @@ class AWSHandler:
             """
         )
 
-        if mount_option == "efs":
+        if mount_option == "efs" or mount_option == "efs_root":
             uid = self.get_sagemaker_studio_uid(user_name)
             user_data_script += dedent(
                 f"""\
                 # Install NFS client
                 if command -v apt-get &> /dev/null; then
                     sudo apt-get update
-                    sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common -y
+                    sudo DEBIAN_FRONTEND=noninteractive apt-get install nfs-common bindfs -y
                 elif command -v yum &> /dev/null; then
-                    sudo yum install -y nfs-utils
+                    sudo yum install -y nfs-utils bindfs
                 elif command -v zypper &> /dev/null; then
-                    sudo zypper install -y nfs-client
+                    sudo zypper install -y nfs-client bindfs
                 else
-                    echo "Unsupported package manager. Please install nfs client manually."
+                    echo "Unsupported package manager. Please install nfs client and bindfs manually."
                     exit 1
                 fi
 
@@ -214,6 +214,12 @@ wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
                 sudo chown -R $USER:users $HOME/.ssh
                 """
             )
+            if mount_option == "efs_root":
+                user_data_script += dedent(
+                    """\
+                    sudo bindfs --map=ubuntu/root -o nonempty /home/ubuntu /root
+                    """
+                )
 
         elif mount_option == "ebs":
             user_data_script += dedent(

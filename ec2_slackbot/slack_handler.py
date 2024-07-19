@@ -288,14 +288,23 @@ class SlackHandler:
 
         uid = self.aws_handler.get_sagemaker_studio_uid(user_name)
         if uid is not None:
-            mount_options.append(
-                {
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Mount SageMaker Studio EFS",
+            mount_options.extend(
+                [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Mount SageMaker Studio EFS at $HOME",
+                        },
+                        "value": "efs",
                     },
-                    "value": "efs",
-                }
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Mount SageMaker Studio EFS at /root",
+                        },
+                        "value": "efs_root",
+                    },
+                ]
             )
         if self.aws_handler.get_volume_for_user(user_name) is not None:
             mount_options.append(
@@ -679,9 +688,10 @@ class SlackHandler:
                 "mount_option": mount_option,
                 "volume_id": volume["id"] if volume is not None else None,
             }
+            user = ami["user"] if mount_option != "efs_root" else "root"
             success_message = (
                 "EC2 instance {0} launched successfully. You can now run: "
-                f"ssh {ami['user']}@{{0}}"
+                f"ssh {user}@{{0}}"
             )
             error_message = "Error launching EC2 instance: {}"
 
