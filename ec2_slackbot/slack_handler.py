@@ -51,23 +51,20 @@ class SlackHandler:
             logging.error("Error fetching users: %s", e.response["error"])
         return {}
 
-    def send_warning(
-        self, user_id: str, instance_id: str, instance_type: str, running_days: int
-    ) -> None:
+    def send_warning(self, user_id: str, admin_id: Optional[str], message: str) -> None:
         """
-        Send a warning message to the user.
+        Send a warning message to the user and to the admin (optionally).
         """
         try:
-            self.client.chat_postMessage(
-                channel=user_id,
-                text=(
-                    f"Warning: Your instance {instance_id} ({instance_type}) "
-                    f"has been running for {running_days} days. "
-                    "Please consider terminating it with /ec2 down."
-                ),
-            )
+            self.client.chat_postMessage(channel=user_id, text=message)
         except SlackApiError as e:
             logging.error("Error sending warning: %s", e.response["error"])
+
+        if admin_id:
+            try:
+                self.client.chat_postMessage(channel=admin_id, text=message)
+            except SlackApiError as e:
+                logging.error("Error sending direct message: %s", e.response["error"])
 
     def get_request_data(self, request: Request) -> Optional[Dict[str, Any]]:
         """

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ec2-slackbot"
-version = "0.1.10"
+version = "0.1.11"
 description = ""
 authors = ["Robert Dargavel Smith <teticio@gmail.com>"]
 readme = "README.md"

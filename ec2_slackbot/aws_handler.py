@@ -12,10 +12,6 @@ import boto3
 
 
 class AWSHandler:
-    """
-    A class to handle AWS-related operations.
-    """
-
     def __init__(
         self, config: Dict[str, Any], endpoint_url: Optional[str] = None
     ) -> None:
@@ -30,9 +26,6 @@ class AWSHandler:
     def get_instances_for_user(
         self, user_name: str, states: List[str]
     ) -> Dict[str, Any]:
-        """
-        Retrieves the instances for a given user in the given states.
-        """
         return self.ec2_client.describe_instances(
             Filters=[
                 {"Name": "tag:User", "Values": [user_name]},

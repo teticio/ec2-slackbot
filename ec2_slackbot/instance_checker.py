@@ -24,6 +24,7 @@ class InstanceChecker:
         Periodically check the running instances and send warnings if necessary.
         """
         user_ids = self.slack_handler.get_all_user_ids()
+        admin_id = user_ids.get(self.config.get("admin_user", None), None)
         instance_details = self.aws_handler.get_running_instance_details()
 
         for instance in instance_details:
@@ -38,11 +39,15 @@ class InstanceChecker:
                     instance_cost >= self.config["large_instance_cost_threshold"]
                     and running_days >= self.config["large_instance_warning_days"]
                 ):
+                    message = (
+                        f"Warning: Your instance {instance_id} ({instance_type}) "
+                        f"has been running for {running_days} days. "
+                        "Please consider terminating it with /ec2 down."
+                    )
                     self.slack_handler.send_warning(
                         user_ids[user_name],
-                        instance_id,
-                        instance_type,
-                        running_days,
+                        admin_id,
+                        message,
                     )
 
     def start_periodic_checks(self, interval: int) -> None:
