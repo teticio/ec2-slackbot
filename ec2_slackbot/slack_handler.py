@@ -51,7 +51,13 @@ class SlackHandler:
             logging.error("Error fetching users: %s", e.response["error"])
         return {}
 
-    def send_warning(self, user_id: str, admin_id: Optional[str], message: str) -> None:
+    def send_warning(
+        self,
+        user_id: str,
+        admin_id: Optional[str],
+        message: str,
+        admin_message: Optional[str],
+    ) -> None:
         """
         Send a warning message to the user and to the admin (optionally).
         """
@@ -62,7 +68,7 @@ class SlackHandler:
 
         if admin_id:
             try:
-                self.client.chat_postMessage(channel=admin_id, text=message)
+                self.client.chat_postMessage(channel=admin_id, text=admin_message)
             except SlackApiError as e:
                 logging.error("Error sending direct message: %s", e.response["error"])
 

@@ -44,10 +44,15 @@ class InstanceChecker:
                         f"has been running for {running_days} days. "
                         "Please consider terminating it with /ec2 down."
                     )
+                    admin_message = (
+                        f"Warning: {user_name} has had {instance_id} ({instance_type}) "
+                        f"running for {running_days} days."
+                    )
                     self.slack_handler.send_warning(
                         user_ids[user_name],
                         admin_id,
                         message,
+                        admin_message,
                     )
 
     def start_periodic_checks(self, interval: int) -> None:
