@@ -107,14 +107,16 @@ class SlackHandler:
         user_name = data.get("user_name")
 
         if command == f"/{stage}ec2":
-            return self.handle_ec2_commands(sub_command, trigger_id, user_name)
+            return self.handle_ec2_commands(sub_command, trigger_id, user_id, user_name)
 
         if command == f"/{stage}ebs":
             return self.handle_ebs_commands(sub_command, trigger_id, user_id, user_name)
 
         return jsonify(response_type="ephemeral", text="Command not recognized.")
 
-    def handle_ec2_commands(self, sub_command, trigger_id, user_name) -> Response:
+    def handle_ec2_commands(
+        self, sub_command, trigger_id, user_id, user_name
+    ) -> Response:
         """
         Handles EC2-related commands.
         """
@@ -139,9 +141,23 @@ class SlackHandler:
         if sub_command == "change":
             return self.open_instance_change_modal(trigger_id, user_name)
 
+        if sub_command == "status":
+            if user_name != self.config.get("admin_user"):
+                user_names = [user_name]
+            else:
+                user_names = list(self.get_all_user_ids().keys())
+            self.handle_aws_command(
+                function=self.aws_handler.get_status,
+                user_id=user_id,
+                success_message="{}",
+                error_message="Error getting status",
+                user_names=user_names,
+            )
+            return jsonify(response_type="ephemeral", text="Fetching status...")
+
         return jsonify(
             response_type="ephemeral",
-            text="Command must be one of: key, up, down, change, stop, start.",
+            text="Command must be one of: key, up, down, change, stop, start or status.",
         )
 
     def handle_ebs_commands(

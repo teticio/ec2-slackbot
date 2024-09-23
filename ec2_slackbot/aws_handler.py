@@ -79,6 +79,21 @@ class AWSHandler:
 
         return instance_details
 
+    def get_status(self, user_names: List[str]) -> str:
+        instances = self.get_running_instance_details()
+
+        status = "Running instances:\n"
+        for user_name in user_names:
+            first = True
+            for instance in instances:
+                if instance["user_name"] == user_name:
+                    if first:
+                        status += f"*{user_name}*\n"
+                        first = False
+                    status += f"- {instance['instance_id']} ({instance['instance_type']}): {instance['running_days']} days\n"
+
+        return status
+
     def get_volume_for_user(self, user_name: str) -> Optional[Dict[str, Any]]:
         """
         Retrieves the volume ID, size and attachments for a given user's volume.

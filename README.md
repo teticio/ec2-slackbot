@@ -25,6 +25,7 @@ The bot is designed to be used with Slack slash commands. The following commands
 | `/ec2 change`         | **Modify the configuration of a running EC2 instance.** This opens a modal where you can select the instance and the new instance type. |
 | `/ec2 start`          | **Start stopped EC2 instances.** This opens a modal where you can select the instances to start. |
 | `/ec2 stop`           | **Stop running EC2 instances.** This opens a modal where you can select the instances to stop. |
+| `/ec2 status`         | **Get status of running EC2 instances.** If you are `admin_user`, you will see the running instances of all users. |
 | `/ebs create`         | **Create the EBS volume (limited to one per user).** This opens a modal where you can select the size. |
 | `/ebs resize`         | **Resize the EBS volume.** This opens a modal where you can select the new size. |
 | `/ebs attach`         | **Attach the EBS volume to an EC2 instance.** This opens a modal where you can select the instance to attach to. |
@@ -128,7 +129,7 @@ If you choose not to mount the EBS at `$HOME`, you can use it as an additional d
         - command: /ec2
           url: https://<your-url>/slack/commands
           description: EC2
-          usage_hint: key | up | down | change | start | stop
+          usage_hint: key | up | down | change | start | stop | status
           should_escape: false
         - command: /ebs
           url: https://<your-url>/slack/commands
