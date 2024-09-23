@@ -150,7 +150,7 @@ class SlackHandler:
                 function=self.aws_handler.get_status,
                 user_id=user_id,
                 success_message="{}",
-                error_message="Error getting status",
+                error_message="Error getting status.",
                 user_names=user_names,
             )
             return jsonify(response_type="ephemeral", text="Fetching status...")

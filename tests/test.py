@@ -272,6 +272,7 @@ class TestSlackHandler(unittest.TestCase):
         self._test_stop_instance(mock_chat_post_message)
         self._test_command(mock_views_open, "/ec2", "start")
         self._test_start_instance(mock_chat_post_message)
+        self._test_status(mock_chat_post_message)
         self._test_command(mock_views_open, "/ec2", "change")
         self._test_change_instance_type(mock_chat_post_message)
         self._test_command(mock_views_open, "/ebs", "resize")
@@ -403,6 +404,20 @@ class TestSlackHandler(unittest.TestCase):
         self.post_event(start_payload, timeout=self.timeout)
         mock_chat_post_message.assert_called_with(
             channel=self.user_id, text=f"Started instances: {self.instance_id}"
+        )
+
+    def _test_status(self, mock_chat_post_message: Mock) -> None:
+        """
+        Test status.
+        """
+        logger.info("Testing status")
+        self.command_payload["command"] = f"/{os.getenv('EC2_SLACKBOT_STAGE', '')}ec2"
+        self.command_payload["text"] = "status"
+        response = self.post_command(self.command_payload, timeout=self.timeout)
+        self.assertEqual(response.json()["text"], "Fetching status...")
+        mock_chat_post_message.assert_called_with(
+            channel=self.user_id,
+            text=f"Running instances:\n*{self.user_name}*\n- {self.instance_id} (t2.micro): 0 days\n",
         )
 
     def _test_change_instance_type(self, mock_chat_post_message: Mock) -> None:
