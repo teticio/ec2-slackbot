@@ -91,6 +91,8 @@ class AWSHandler:
                         status += f"*{user_name}*\n"
                         first = False
                     status += f"- {instance['instance_id']} ({instance['instance_type']}): {instance['running_days']} days\n"
+        if first:
+            status += "None\n"
 
         return status
 
