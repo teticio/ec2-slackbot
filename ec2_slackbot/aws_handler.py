@@ -210,8 +210,8 @@ class AWSHandler:
                 # Mount the EFS file system
                 sudo groupmod -g 1001 users
                 sudo usermod -u {uid} -g users $USER
-                echo "{self.config.get('efs_ip')}:/{uid} $HOME nfs nfsvers=4.1,rsize=1048576,\
-wsize=1048576,hard,timeo=600,retrans=2,noresvport 0 0" | sudo tee -a /etc/fstab
+                echo "{self.config.get('efs_ip')}:/{uid} $HOME nfs4 rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,\
+namlen=255,hard,noresvport,proto=tcp,port=20797,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1 0 0" | sudo tee -a /etc/fstab
                 sudo mount $HOME
 
                 # Restore authorized_key
