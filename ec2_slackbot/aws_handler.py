@@ -91,7 +91,7 @@ class AWSHandler:
                         status += f"*{user_name}*\n"
                         first = False
                     status += f"- {instance['instance_id']} ({instance['instance_type']}): {instance['running_days']} days\n"
-        if first:
+        if status == "Running instances:\n":
             status += "None\n"
 
         return status
@@ -211,7 +211,7 @@ class AWSHandler:
                 sudo groupmod -g 1001 users
                 sudo usermod -u {uid} -g users $USER
                 echo "{self.config.get('efs_ip')}:/{uid} $HOME nfs4 rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,\
-namlen=255,hard,noresvport,proto=tcp,port=20797,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1 0 0" | sudo tee -a /etc/fstab
+namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1 0 0" | sudo tee -a /etc/fstab
                 sudo mount $HOME
 
                 # Restore authorized_key
