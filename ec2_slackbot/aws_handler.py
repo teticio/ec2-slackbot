@@ -188,9 +188,7 @@ class AWSHandler:
             # Set soft open file limit to hard limit for all users
             LIMIT=$(ulimit -H -n)
             echo "* soft nofile $LIMIT" | sudo tee -a /etc/security/limits.conf > /dev/null
-            sudo sed -i "/^#*DefaultLimitNOFILE=/c\DefaultLimitNOFILE=$LIMIT" /etc/systemd/system.conf
-            sudo sed -i "/^#*DefaultLimitNOFILE=/c\DefaultLimitNOFILE=$LIMIT" /etc/systemd/user.conf
-            sudo systemctl daemon-reload
+            echo "root soft nofile $LIMIT" | sudo tee -a /etc/security/limits.conf > /dev/null
             """
         )
 
