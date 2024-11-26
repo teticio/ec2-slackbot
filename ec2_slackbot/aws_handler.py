@@ -232,9 +232,23 @@ namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.
             if mount_option == "efs_root":
                 user_data_script += dedent(
                     """\
-                    sudo bindfs --map=ubuntu/root -o nonempty /home/ubuntu /root
-                    echo "bindfs#/home/ubuntu /root fuse map=ubuntu/root,nonempty,x-systemd.requires=/home/ubuntu,x-systemd.automount 0 0" \
-| sudo tee -a /etc/fstab
+                    sudo tee /etc/systemd/system/mount-root.service > /dev/null <<EOF
+                    [Unit]
+                    Description=Bind /home/ubuntu to /root
+                    Requires=home-ubuntu.mount
+                    After=home-ubuntu.mount
+
+                    [Service]
+                    ExecStart=/usr/bin/bindfs -o map=ubuntu/root,nonempty /home/ubuntu /root
+                    ExecStop=/bin/umount /root
+                    RemainAfterExit=yes
+
+                    [Install]
+                    WantedBy=multi-user.target
+                    EOF
+                    sudo systemctl daemon-reload
+                    sudo systemctl enable mount-root.service
+                    sudo systemctl start mount-root.service
                     """
                 )
 
