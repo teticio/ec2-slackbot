@@ -233,7 +233,8 @@ namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.
                 user_data_script += dedent(
                     """\
                     sudo bindfs --map=ubuntu/root -o nonempty /home/ubuntu /root
-                    echo "bindfs#/home/ubuntu /root fuse map=ubuntu/root,nonempty 0 0" | sudo tee -a /etc/fstab
+                    echo "bindfs#/home/ubuntu /root fuse map=ubuntu/root,nonempty,x-systemd.requires=/home/ubuntu,x-systemd.automount 0 0" \
+| sudo tee -a /etc/fstab
                     """
                 )
 
