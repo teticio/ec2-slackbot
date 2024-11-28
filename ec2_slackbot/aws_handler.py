@@ -234,12 +234,12 @@ namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.
                     """\
                     sudo bash -c "cat > /etc/systemd/system/mount-root.service <<EOF
                     [Unit]
-                    Description=Bind /home/ubuntu to /root
-                    Requires=home-ubuntu.mount
-                    After=home-ubuntu.mount
+                    Description=Bind ${HOME} to /root
+                    Requires=home-${USER}.mount
+                    After=home-${USER}.mount
 
                     [Service]
-                    ExecStart=/usr/bin/bindfs -o map=ubuntu/root,nonempty /home/ubuntu /root
+                    ExecStart=/usr/bin/bindfs -o map=${USER}/root,nonempty ${HOME} /root
                     ExecStop=/bin/umount /root
                     RemainAfterExit=yes
                     LimitNOFILE=${LIMIT}
