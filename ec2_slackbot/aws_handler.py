@@ -232,7 +232,7 @@ namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.
             if mount_option == "efs_root":
                 user_data_script += dedent(
                     """\
-                    sudo bash -c 'cat > /etc/systemd/system/mount-root.service <<EOF
+                    sudo bash -c "cat > /etc/systemd/system/mount-root.service <<EOF
                     [Unit]
                     Description=Bind /home/ubuntu to /root
                     Requires=home-ubuntu.mount
@@ -246,7 +246,7 @@ namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=127.
 
                     [Install]
                     WantedBy=multi-user.target
-                    EOF'
+                    EOF"
                     sudo systemctl daemon-reload
                     sudo systemctl enable mount-root.service
                     sudo systemctl start mount-root.service
